@@ -285,11 +285,16 @@ export function LuggageStorageForm({ selectedBag }: LuggageStorageFormProps) {
                           field.onChange(date);
                           setStartDatePopoverOpen(false); // Close the popover after selecting a date
                         }}
-                        disabled={
-                          (date: number) =>
-                            date < Date.now() ||
-                            date < new Date("1900-01-01").getTime() // Convert the 1900 date to a timestamp
-                        }
+                        disabled={(date: any) => {
+                          const startDate = form.watch("startDate");
+                          const startDateTimestamp = startDate
+                            ? new Date(startDate).getTime()
+                            : 0;
+                          return (
+                            date <= startDate ||
+                            date < new Date("1900-01-01").getTime()
+                          );
+                        }}
                         initialFocus
                       />
                     </PopoverContent>
