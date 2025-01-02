@@ -281,12 +281,14 @@ export function LuggageStorageForm({ selectedBag }: LuggageStorageFormProps) {
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={(date) => {
+                        onSelect={(date: any) => {
                           field.onChange(date);
                           setStartDatePopoverOpen(false); // Close the popover after selecting a date
                         }}
-                        disabled={(date) =>
-                          date < new Date() || date < new Date("1900-01-01")
+                        disabled={
+                          (date: number) =>
+                            date < Date.now() ||
+                            date < new Date("1900-01-01").getTime() // Convert the 1900 date to a timestamp
                         }
                         initialFocus
                       />
@@ -328,14 +330,20 @@ export function LuggageStorageForm({ selectedBag }: LuggageStorageFormProps) {
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={(date) => {
+                        onSelect={(date: any) => {
                           field.onChange(date);
                           setEndDatePopoverOpen(false); // Close the popover after selecting a date
                         }}
-                        disabled={(date) =>
-                          date <= form.watch("startDate") ||
-                          date < new Date("1900-01-01")
-                        }
+                        disabled={(date: any) => {
+                          const startDate = form.watch("startDate");
+                          const startDateTimestamp = startDate
+                            ? new Date(startDate).getTime()
+                            : 0;
+                          return (
+                            date <= startDateTimestamp ||
+                            date < new Date("1900-01-01").getTime()
+                          );
+                        }}
                         defaultMonth={field.value || new Date()} // Opens to the selected date's month or current month
                         initialFocus
                       />
