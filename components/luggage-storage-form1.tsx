@@ -35,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 interface LuggageStorageFormProps {
   selectedBag: string;
 }
@@ -51,9 +52,47 @@ type PriceDistribution = {
   }[];
   pickupFee: number;
   total: number;
+  duration: number;
 };
+
+type UserLocation = { lat: number; lng: number } | null;
+
+const locations = [
+  { name: "ITC Infotech", lat: 12.9986, lng: 77.6252 },
+  { name: "Koramangala", lat: 12.9279, lng: 77.6359 }, // Koramangala
+  {
+    name: "Bangalore Airport (Kempegowda International Airport)",
+    lat: 13.1986,
+    lng: 77.7069,
+  }, // Bangalore Airport
+  { name: "Kalyan Nagar", lat: 13.0228, lng: 77.6417 }, // Kalyan Nagar
+];
+
+// Haversine formula to calculate distance
+function haversineDistance(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+) {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+
+  const R = 6371; // Radius of Earth in km
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in km
+}
 export function LuggageStorageForm({ selectedBag }: LuggageStorageFormProps) {
-  console.log("sss", selectedBag);
+  // console.log("sss", selectedBag);
 
   const [images, setImages] = useState<File[]>([]);
   const [startDatePopoverOpen, setStartDatePopoverOpen] = useState(false);
@@ -70,18 +109,52 @@ export function LuggageStorageForm({ selectedBag }: LuggageStorageFormProps) {
     { size: "large", count: selectedBag === "Large" ? 1 : 0 },
   ]);
 
-  const locations = [
-    { name: "Downtown Storage", distance: 2.5 },
-    { name: "Suburb Safe", distance: 5.1 },
-    { name: "Central Lockers", distance: 1.8 },
-  ];
+  const [userLocation, setUserLocation] = useState<UserLocation>(null); // User's location {lat, lng}
+  const [locationsWithDistance, setLocationsWithDistance] = useState<
+    {
+      name: string;
+      distance: string;
+    }[]
+  >([]); // Updated locations with distance, typed correctly
+
+  // const [selectedLocation, setSelectedLocation] = useState("");
+  useEffect(() => {
+    // Get user's location using Geolocation API
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+        setUserLocation({ lat: userLat, lng: userLng });
+      },
+      (error) => {
+        console.error("Error fetching location:", error);
+      }
+    );
+  }, []);
+
+  useEffect(() => {
+    if (userLocation) {
+      // Calculate distances for each location
+      const updatedLocations = locations.map((location) => ({
+        name: location.name,
+        distance: haversineDistance(
+          userLocation.lat,
+          userLocation.lng,
+          location.lat,
+          location.lng
+        ).toFixed(2), // Limit to 2 decimal places
+      }));
+      setLocationsWithDistance(updatedLocations);
+    }
+  }, [userLocation]);
+
   const [priceDistribution, setPriceDistribution] =
     useState<PriceDistribution | null>(null);
 
   const form = useForm({
     defaultValues: {
       startDate: new Date(),
-      endDate: new Date(),
+      endDate: null,
       deliveryOption: "self",
     },
   });
@@ -113,20 +186,53 @@ export function LuggageStorageForm({ selectedBag }: LuggageStorageFormProps) {
   const startDate = form.watch("startDate");
   const endDate = form.watch("endDate");
 
+  // const [luggage, setLuggage] = useState([
+  //   { size: "small", count: 0 },
+  //   { size: "medium", count: 0 },
+  //   { size: "large", count: 0 },
+  // ]);
+
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const handleLuggageChange = (
     size: "small" | "medium" | "large",
     increment: boolean
   ) => {
-    setLuggage((prevLuggage) =>
-      prevLuggage.map((item) =>
-        item.size === size
-          ? {
+    const weightMapping = {
+      small: 10,
+      medium: 15,
+      large: 20,
+    };
+
+    setLuggage((prevLuggage) => {
+      const totalWeight = prevLuggage.reduce(
+        (sum, item) => sum + item.count * weightMapping[item.size],
+        0
+      );
+
+      return prevLuggage.map((item) => {
+        if (item.size === size) {
+          const newCount = increment
+            ? item.count + 1
+            : Math.max(0, item.count - 1);
+          const newWeight =
+            totalWeight + (newCount - item.count) * weightMapping[size];
+          // console.log("nnnnn  ", newWeight);
+
+          // Allow update only if it does not exceed 200kg
+          if (newWeight <= 200 || !increment) {
+            setErrorMessage(null); // Clear error message
+            return {
               ...item,
-              count: increment ? item.count + 1 : Math.max(0, item.count - 1),
-            }
-          : item
-      )
-    );
+              count: newCount,
+            };
+          } else {
+            setErrorMessage("Total weight cannot exceed 200 kg.");
+          }
+        }
+        return item;
+      });
+    });
   };
 
   const calculateDuration = () => {
@@ -198,6 +304,7 @@ export function LuggageStorageForm({ selectedBag }: LuggageStorageFormProps) {
         total:
           distribution.reduce((sum, item) => sum + item.totalPrice, 0) +
           pickupFee,
+        duration: months,
       };
     }
 
@@ -246,6 +353,7 @@ export function LuggageStorageForm({ selectedBag }: LuggageStorageFormProps) {
                   </Button>
                 </div>
               ))}
+              {errorMessage && <p className="text-red-500">{errorMessage}</p>}
             </div>
           </div>
           <div className="flex justify-between">
@@ -283,16 +391,24 @@ export function LuggageStorageForm({ selectedBag }: LuggageStorageFormProps) {
                         selected={field.value}
                         onSelect={(date: any) => {
                           field.onChange(date);
+                          // console.log("end date", endDate);
+                          if (endDate && date && new Date(endDate) < date) {
+                            form.setValue("endDate", date); // Update endDate
+                          }
+
                           setStartDatePopoverOpen(false); // Close the popover after selecting a date
                         }}
                         disabled={(date: any) => {
-                          const startDate = form.watch("startDate");
+                          const today = new Date(); // Get today's date
+                          today.setHours(0, 0, 0, 0); // Normalize to midnight for accurate comparison
+
                           const startDateTimestamp = startDate
                             ? new Date(startDate).getTime()
                             : 0;
+
                           return (
-                            date <= startDate ||
-                            date < new Date("1900-01-01").getTime()
+                            date < today || // Disable only past dates
+                            date < new Date("1900-01-01").getTime() // Ensure the date is after startDate if set
                           );
                         }}
                         initialFocus
@@ -334,13 +450,14 @@ export function LuggageStorageForm({ selectedBag }: LuggageStorageFormProps) {
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={field.value}
+                        selected={field.value || undefined}
                         onSelect={(date: any) => {
                           field.onChange(date);
+
                           setEndDatePopoverOpen(false); // Close the popover after selecting a date
                         }}
                         disabled={(date: any) => {
-                          const startDate = form.watch("startDate");
+                          // const startDate = form.watch("startDate");
                           const startDateTimestamp = startDate
                             ? new Date(startDate).getTime()
                             : 0;
@@ -360,22 +477,24 @@ export function LuggageStorageForm({ selectedBag }: LuggageStorageFormProps) {
             />
           </div>
 
-          <div className="mt-4 flex justify-between">
-            <h3>Total Duration</h3>
-            <p>
-              {duration
-                ? duration.totalMonths > 0
-                  ? `${duration.totalMonths} month${
-                      duration.totalMonths !== 1 ? "s" : ""
-                    } and ${duration.remainingDays} day${
-                      duration.remainingDays !== 1 ? "s" : ""
-                    }`
-                  : `${duration.remainingDays} day${
-                      duration.remainingDays !== 1 ? "s" : ""
-                    }`
-                : "Select both dates to see the duration."}
-            </p>
-          </div>
+          {startDate != endDate && endDate && (
+            <div className="mt-4 flex justify-between">
+              <h3>Total Duration</h3>
+              <p>
+                {duration
+                  ? duration.totalMonths > 0
+                    ? `${duration.totalMonths} month${
+                        duration.totalMonths !== 1 ? "s" : ""
+                      } and ${duration.remainingDays} day${
+                        duration.remainingDays !== 1 ? "s" : ""
+                      }`
+                    : `${duration.remainingDays} day${
+                        duration.remainingDays !== 1 ? "s" : ""
+                      }`
+                  : "Select both dates to see the duration."}
+              </p>
+            </div>
+          )}
 
           <FormField
             control={form.control}
@@ -406,13 +525,12 @@ export function LuggageStorageForm({ selectedBag }: LuggageStorageFormProps) {
                                 <SelectValue placeholder="Select a location" />
                               </SelectTrigger>
                               <SelectContent>
-                                {locations.map((location) => (
+                                {locationsWithDistance.map((location) => (
                                   <SelectItem
                                     key={location.name}
                                     value={location.name}
                                   >
-                                    {location.name} ({location.distance} km
-                                    away)
+                                    {location.name}({location.distance} km away)
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -507,34 +625,47 @@ export function LuggageStorageForm({ selectedBag }: LuggageStorageFormProps) {
           </FormItem>
 
           {priceDistribution && (
-            <div className="mt-6 p-4 bg-gray-100 rounded-lg">
-              <h4 className="text-lg font-semibold mb-2">Price Summary</h4>
-              <div className="space-y-2">
-                {priceDistribution.items.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex justify-between items-center"
-                  >
+            <Card>
+              <CardHeader>
+                <CardTitle>Price Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center font-semibold">
+                    <span>Total Duration</span>
                     <span>
-                      {item.count} x {item.size} Luggage (₹{item.pricePerMonth}
-                      /month each)
+                      {priceDistribution.duration}{" "}
+                      {priceDistribution.duration > 1 ? "months" : "month"}
                     </span>
-                    <span>₹{item.totalPrice}</span>
                   </div>
-                ))}
-                {priceDistribution.pickupFee > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span>Pickup fee</span>
-                    <span>₹{priceDistribution.pickupFee}</span>
+                  {priceDistribution.items.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex justify-between items-center"
+                    >
+                      <span>
+                        {item.count} x {item.size} Luggage (₹
+                        {item.pricePerMonth}
+                        /month each)
+                      </span>
+                      <span>₹{item.totalPrice}</span>
+                    </div>
+                  ))}
+                  {priceDistribution.pickupFee > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span>Pickup fee</span>
+                      <span>₹{priceDistribution.pickupFee}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center font-semibold pt-2 border-t">
+                    <span>Total</span>
+                    <span>₹{priceDistribution.total}</span>
                   </div>
-                )}
-                <div className="flex justify-between items-center font-semibold pt-2 border-t">
-                  <span>Total</span>
-                  <span>₹{priceDistribution.total}</span>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
+
           <Button type="submit">Submit</Button>
         </form>
       </Form>
