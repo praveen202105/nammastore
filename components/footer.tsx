@@ -1,5 +1,3 @@
-import { Luggage } from "lucide-react";
-
 export default function Footer() {
   return (
     <footer className="bg-white">

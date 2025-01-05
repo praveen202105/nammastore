@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken';
 import Order from '@/models/Order'; // Order model
 import Store from '@/models/Store'; // Store model
 import { verifyToken } from '@/lib/auth'; // Token verification utility

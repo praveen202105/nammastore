@@ -25,7 +25,7 @@ export default function Hero() {
                 Store your luggage securely for the price of a movie ticket. No
                 need to worry about your belongings or pay unnecessary rent.
                 Extend your subscription anytime if your vacation gets longer -
-                we'll take care of everything!
+                we&apos;ll take care of everything!
               </p>
               <div className="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
                 <div className="mt-3 sm:mt-0 sm:ml-3">
@@ -38,13 +38,7 @@ export default function Hero() {
           </main>
         </div>
       </div>
-      <div className="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2">
-        <img
-          className="h-56 w-full object-cover sm:h-72 md:h-96 lg:w-full lg:h-full"
-          src="/placeholder.svg?height=600&width=800"
-          alt="Luggage storage facility"
-        />
-      </div>
+      <div className="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2"></div>
     </div>
   );
 }

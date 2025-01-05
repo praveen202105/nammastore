@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import mongoose from 'mongoose';
 import Order from  "@/models/Order";;  // Import Order model
 import Store from '@/models/Store';  // Import Store model
 import { verifyToken } from '@/lib/auth';
