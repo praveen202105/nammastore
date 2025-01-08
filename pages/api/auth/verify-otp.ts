@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import jwt from "jsonwebtoken";
 import connectToDatabase from "@/lib/db";
 import User from "@/models/User";
-import Otp from "@/models/otp"; // Assuming you have an Otp schema for storing OTPs
+import Otp from "@/models/Otp"; // Assuming you have an Otp schema for storing OTPs
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {

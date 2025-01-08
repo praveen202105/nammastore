@@ -2,7 +2,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import bcrypt from "bcrypt";
 import connectToDatabase from "@/lib/db";
-import Otp from "@/models/otp" // Otp model
+import Otp from "@/models/Otp" // Otp model
 import User from "@/models/User"; // User model
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

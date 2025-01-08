@@ -3,7 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 import connectToDatabase from "@/lib/db";
-import Otp from "@/models/otp"; // Assuming Otp model is defined
+import Otp from "@/models/Otp" // Assuming Otp model is defined
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
