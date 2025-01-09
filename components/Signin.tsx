@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import axios from "axios";
+import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,22 +17,51 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
+import { useUser } from "@/store/userContext";
+import { Loader2 } from "lucide-react";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { setUser } = useUser();
+  const router = useRouter();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    setLoading(false);
+    try {
+      // Implement your sign-in logic here
+      // For example:
+      // const response = await axios.post("/api/auth/signin", { email, password });
+      // const { user, token } = response.data;
+
+      // Simulating a successful sign-in for demonstration
+      const user = {
+        name: "Test User",
+        email,
+        profilePic: "https://example.com/default-avatar.png",
+      };
+      const token = "sample-token";
+
+      setUser(user);
+      Cookies.set("authToken", token, { expires: 1 / 24 }); // 1 hour
+      router.push("/home");
+    } catch (error) {
+      setError("Invalid email or password");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleLogin = (response: any) => {
+  const handleGoogleLogin = async (response: any) => {
+    setGoogleLoading(true);
+    setError(null);
+
     try {
       const decoded: any = jwtDecode(response.credential);
       console.log("Decoded User Info:", decoded);
@@ -40,11 +72,32 @@ export default function SignIn() {
         picture: decoded.picture,
       };
 
-      console.log("User Profile:", userProfile);
+      // Post user data to backend
+      const { data } = await axios.post("/api/auth/google", userProfile);
+
+      // Assuming data contains the user object and token
+      const { user, token } = data;
+
+      // Set the user in context
+      setUser(user);
+
+      // Set the token in a cookie with an expiration time (e.g., 1 hour)
+      Cookies.set("authToken", token, { expires: 1 / 24 }); // 1 hour
+
+      console.log("User successfully logged in:", user);
+
+      // Wait for 2 seconds before navigation
+      setTimeout(() => {
+        router.push("/profile");
+        setGoogleLoading(false);
+      }, 2000);
     } catch (error) {
       console.error("Error decoding token:", error);
+      setError("Failed to sign in with Google");
+      setGoogleLoading(false);
     }
   };
+
   return (
     <Card className="w-[350px]">
       <CardHeader>
@@ -81,7 +134,7 @@ export default function SignIn() {
         </form>
       </CardContent>
       <CardFooter className="flex flex-col">
-        <Button className="w-full" type="submit" disabled={loading}>
+        <Button className="w-full" onClick={handleSignIn} disabled={loading}>
           {loading ? "Signing in..." : "Sign In"}
         </Button>
         <div className="relative my-4">
@@ -94,10 +147,20 @@ export default function SignIn() {
             </span>
           </div>
         </div>
-        <GoogleLogin
-          onSuccess={handleLogin}
-          onError={() => console.log("Login Failed")}
-        />
+        {googleLoading ? (
+          <Button disabled className="w-full">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Signing in with Google...
+          </Button>
+        ) : (
+          <GoogleLogin
+            onSuccess={handleGoogleLogin}
+            onError={() => setError("Google Sign-In Failed")}
+            theme="filled_blue"
+            size="large"
+            width="350"
+          />
+        )}
         {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
       </CardFooter>
     </Card>
