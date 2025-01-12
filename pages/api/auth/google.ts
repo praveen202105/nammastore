@@ -28,11 +28,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
-      const token = jwt.sign(
-        { email: user.email, name: user.name, profilePic: user.imageUrl },
-        SECRET_KEY||"", 
-        { expiresIn: '1h' } // Set expiration time for the token
-      );
+      // const token = jwt.sign(
+      //   { email: user.email, name: user.name, profilePic: user.imageUrl },
+      //   SECRET_KEY||"", 
+      //   { expiresIn: '1h' } // Set expiration time for the token
+      // );
+
+      console.log("userrr", user);
+      
+      const token = jwt.sign({ id: user._id, email: user.email, role: user.role ,name,profilePic: picture}, process.env.JWT_SECRET || 'secret', {
+        expiresIn: '7d',
+      });
       res.status(200).json({
         user: {
           name,

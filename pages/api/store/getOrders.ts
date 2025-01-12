@@ -33,18 +33,20 @@ const getOrdersForStore = async (req: NextApiRequest, res: NextApiResponse) => {
       // Query orders for the specific store
     //   const orders = await Order.find({ storeId }).sort({ createdAt: -1 }); // Sort orders by creation date (most recent first)
     const orders = await Order.find({ storeId })
-    .select('_id pickupDate returnDate luggage') // Get the whole luggage object
+    // .select('_id pickupDate returnDate luggage paymentStatus status') // Get the whole luggage object
     .sort({ createdAt: -1 });
   
-  const ordersWithTotalBags = orders.map(order => ({
-    _id: order._id,
-    pickupDate: order.pickupDate,
-    returnDate: order.returnDate,
-    totalBags: order.luggage.totalBags, // Directly access the totalBags
-  }));
+  // const ordersWithTotalBags = orders.map(order => ({
+  //   _id: order._id,
+  //   pickupDate: order.pickupDate,
+  //   returnDate: order.returnDate,
+  //   totalBags: order.luggage.totalBags, // Directly access the totalBags
+  //   PaymentStatus:order.paymentStatus,
+  //   OrderStatus:order.status
+  // }));
     
       // Return orders
-      return res.status(200).json({ orders:ordersWithTotalBags });
+      return res.status(200).json({ orders });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: 'Error retrieving orders', error });

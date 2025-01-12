@@ -31,6 +31,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       expiresIn: '7d',
     });
   
-    return res.status(200).json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    return res.status(200).json({ token, user: { id: user._id, name: user.name, email: email, role: user.role } });
   }
   

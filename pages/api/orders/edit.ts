@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import Order from '@/models/Order'; // Order model
 import Store from '@/models/Store'; // Store model
 import { verifyToken } from '@/lib/auth'; // Token verification utility
+import connectToDatabase from '@/lib/db';
 
 // Create an API to edit an order (Admin only)
 const editOrder = async (req: NextApiRequest, res: NextApiResponse) => {
@@ -31,6 +32,8 @@ const editOrder = async (req: NextApiRequest, res: NextApiResponse) => {
     }
 
     try {
+      await connectToDatabase();
+
       // Find the order by ID
       const order = await Order.findById(orderId);
       if (!order) {

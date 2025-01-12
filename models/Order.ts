@@ -46,27 +46,40 @@ const OrderSchema: Schema = new Schema(
       }],
     },
     duration: { type: Number, required: true },  // Can be in days or months
-    price: { type: Number, required: true },
-    status: { type: String, default: 'pending' },
+    // price: { type: Number, required: true },
+    status: { type: String, enum: ['pending', 'confirmed', 'cancelled', 'completed'], required: true },
     pickupDate: { type: Date, required: true },
     returnDate: { type: Date, required: true },
     images: { type: [String], required: false }, // Array of image URLs
     slot: {                                    // Object for drop-off date and time
-      date: { type: Date, required: true },     // Drop-off date
+      date: { type: String, required: true },     // Drop-off date
       time: { type: String, required: true },   // Drop-off time (e.g., '10:00 AM')
     },
 
     // Payment Details
-    paymentMethod: { type: String, required: true }, // E.g., 'credit card', 'paypal'
-    paymentStatus: { type: String, required: true, default: 'pending' }, // Payment status
-    transactionId: { type: String, required: true }, // Payment transaction ID
-    paymentDate: { type: Date, required: true },    // Date when payment was made
+    paymentMethod: { type: String, 
+      // required: true
+
+     }, // E.g., 'credit card', 'paypal'
+    paymentStatus: { type: String, 
+      // 
+      // required: true,
+       default: 'pending' }, // Payment status
+    transactionId: { type: String,
+      //  required: true 
+      }, // Payment transaction ID
+    paymentDate: { type: Date, 
+      // required: true 
+    },    // Date when payment was made
     discount: { type: Number, default: 0 },         // Discount applied to the order
     totalAmount: { type: Number, required: true },  // Final amount to be paid
-    currency: { type: String, required: true },     // Currency of the payment (e.g., 'USD')
+    currency: { type: String, 
+      defaultL:'INR'
+      // required: true
+     },     // Currency of the payment (e.g., 'USD')
 
     // Aadhaar Number
-    aadhaar: { type: String, required: true, match: /^[0-9]{12}$/ },  // Ensure it's a 12-digit number
+    aadhaar: { type: String, match: /^[0-9]{12}$/ },  // Ensure it's a 12-digit number
   },
   { timestamps: true }
 );

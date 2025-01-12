@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import Order from  "@/models/Order";;  // Import Order model
 import Store from '@/models/Store';  // Import Store model
 import { verifyToken } from '@/lib/auth';
+import connectToDatabase from '@/lib/db';
 
 // Create an Order and update the Store capacity
 const createOrder = async (req: NextApiRequest, res: NextApiResponse) => {
@@ -27,6 +28,8 @@ const createOrder = async (req: NextApiRequest, res: NextApiResponse) => {
     } = req.body;
 
     try {
+      await connectToDatabase();
+
       // Validate data
       const user = await verifyToken(req);
       if (!user) {

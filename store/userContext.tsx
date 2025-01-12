@@ -13,6 +13,8 @@ interface User {
   name: string;
   email: string;
   profilePic: string;
+  role: string;
+  id: string;
 }
 
 interface UserContextType {
@@ -31,10 +33,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     if (token) {
       try {
         const decoded: any = jwtDecode(token); // Decode the JWT token
+        console.log("ddfdfd ", decoded);
+
         setUser({
           name: decoded.name,
           email: decoded.email,
           profilePic: decoded.profilePic,
+          role: decoded.role,
+          id: decoded.id,
         });
       } catch (error) {
         console.error("Error decoding token:", error);
