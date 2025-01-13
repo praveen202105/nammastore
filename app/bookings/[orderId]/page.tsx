@@ -88,7 +88,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsProps) {
         // console.log("tokenn ", token);
 
         const response = await fetch(
-          `http://localhost:3000/api/orders/getdetails?orderId=${orderId}`,
+          `/api/orders/getdetails?orderId=${orderId}`,
           {
             method: "GET",
             headers: {
