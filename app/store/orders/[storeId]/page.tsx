@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EditOrderModal } from "@/components/edit-order-modal";
+// import { EditOrderModal } from "@/components/edit-order-modal";
 import { OrderCard } from "@/components/order-card";
 
 interface Bag {
@@ -47,19 +47,22 @@ interface Order {
 
 export default function StoreOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  // const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("date");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const token = Cookies.get("authToken");
 
-  const handleEditOrder = (order: Order) => {
-    setEditingOrder(order);
-  };
+  // const handleEditOrder = (order: Order) => {
+  //   setEditingOrder(order);
+  // };
 
   useEffect(() => {
+    const token = Cookies.get("authToken");
+    if (!token) {
+      throw new Error("Token not found in cookies");
+    }
     const fetchOrderDetails = async () => {
       setLoading(true);
       try {
@@ -89,69 +92,70 @@ export default function StoreOrdersPage() {
     fetchOrderDetails();
   }, []);
 
-  const handleUpdateOrder = async (updatedOrder: Order) => {
-    console.log("Updating order: ", updatedOrder);
+  // const handleUpdateOrder = async (updatedOrder: Order) => {
+  //   console.log("Updating order: ", updatedOrder);
 
-    try {
-      // Make API call to update the order
-      const response = await fetch(
-        `/api/orders/edit?orderId=${updatedOrder._id}`,
-        {
-          method: "PUT", // Use PUT or PATCH depending on your API design
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(updatedOrder),
-        }
-      );
+  //   try {
+  //     // Make API call to update the order
+  //     const response = await fetch(
+  //       `/api/orders/edit?orderId=${updatedOrder._id}`,
+  //       {
+  //         method: "PUT", // Use PUT or PATCH depending on your API design
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //         body: JSON.stringify(updatedOrder),
+  //       }
+  //     );
 
-      if (!response.ok) {
-        throw new Error("Failed to update the order");
-      }
+  //     if (!response.ok) {
+  //       throw new Error("Failed to update the order");
+  //     }
 
-      const updatedOrderFromServer = await response.json();
-      // console.log("ordeee ", updatedOrderFromServer.order);
+  //     const updatedOrderFromServer = await response.json();
+  //     // console.log("ordeee ", updatedOrderFromServer.order);
 
-      // Update local state with the updated order
-      console.log("uuu", updatedOrderFromServer.order);
+  //     // Update local state with the updated order
+  //     console.log("uuu", updatedOrderFromServer.order);
 
-      setOrders(
-        orders.map((order) =>
-          order._id === updatedOrder._id ? updatedOrder : order
-        )
-      );
+  //     setOrders(
+  //       orders.map((order) =>
+  //         order._id === updatedOrder._id ? updatedOrder : order
+  //       )
+  //     );
 
-      console.log("Order updated successfully:", updatedOrderFromServer);
-    } catch (error) {
-      console.error("Error updating order:", error);
-    } finally {
-      // Close the editing modal or reset the editing state
-      setEditingOrder(null);
-    }
-  };
+  //     console.log("Order updated successfully:", updatedOrderFromServer);
+  //   } catch (error) {
+  //     console.error("Error updating order:", error);
+  //   } finally {
+  //     // Close the editing modal or reset the editing state
+  //     setEditingOrder(null);
+  //   }
+  // };
 
   useEffect(() => {
     console.log("ooo ", orders);
   }, [orders]);
-  const filteredOrders = orders
-    .filter(
-      (order) =>
-        (statusFilter === "all" || order.status === statusFilter) &&
-        (order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          order.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          order.paymentStatus.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
-    .sort((a, b) => {
-      if (sortBy === "date") {
-        return (
-          new Date(b.pickupDate).getTime() - new Date(a.pickupDate).getTime()
-        );
-      } else if (sortBy === "amount") {
-        return b.totalAmount - a.totalAmount;
-      }
-      return 0;
-    });
+
+  // const filteredOrders = orders
+  //   .filter(
+  //     (order) =>
+  //       (statusFilter === "all" || order.status === statusFilter) &&
+  //       (order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //         order.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //         order.paymentStatus.toLowerCase().includes(searchTerm.toLowerCase()))
+  //   )
+  //   .sort((a, b) => {
+  //     if (sortBy === "date") {
+  //       return (
+  //         new Date(b.pickupDate).getTime() - new Date(a.pickupDate).getTime()
+  //       );
+  //     } else if (sortBy === "amount") {
+  //       return b.totalAmount - a.totalAmount;
+  //     }
+  //     return 0;
+  //   });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
@@ -201,24 +205,37 @@ export default function StoreOrdersPage() {
               </div>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {orders.map((order) => (
-                <OrderCard
-                  key={order._id}
-                  order={order}
-                  onEdit={() => handleEditOrder(order)}
-                />
-              ))}
+              {loading && (
+                <div className="text-center">
+                  <span>Loading...</span>
+                </div>
+              )}
+
+              {error && (
+                <div className="text-center text-red-500">
+                  <span>{error}</span>
+                </div>
+              )}
+              {!loading &&
+                !error &&
+                orders.map((order) => (
+                  <OrderCard
+                    key={order._id}
+                    order={order}
+                    // onEdit={() => handleEditOrder(order)}
+                  />
+                ))}
             </div>
           </CardContent>
         </Card>
 
-        {editingOrder && (
+        {/* {editingOrder && (
           <EditOrderModal
             order={editingOrder}
             onClose={() => setEditingOrder(null)}
-            onUpdate={handleUpdateOrder}
+            // onUpdate={handleUpdateOrder}
           />
-        )}
+        )} */}
       </div>
     </div>
   );

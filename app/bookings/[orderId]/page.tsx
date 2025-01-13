@@ -1,8 +1,29 @@
 "use client";
+interface Luggage {
+  totalBags: number;
+  bags: { _id: string; size: string; weight: number }[];
+}
+
+interface OrderDetails {
+  _id: string;
+  status: string;
+  storeName: string;
+  storeAddress: string;
+  pickupDate: string;
+  returnDate: string;
+  luggage: Luggage;
+  slot: { time: string };
+  paymentMethod: string;
+  paymentStatus: string;
+  transactionId: string;
+  discount: number;
+  totalAmount: number;
+  currency: string;
+  images: string[];
+}
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
 import {
   ArrowLeft,
   Calendar,
@@ -10,7 +31,6 @@ import {
   Package,
   CreditCard,
   ImageIcon,
-  FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import Cookies from "js-cookie";
@@ -25,30 +45,26 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
+// import { StaticImport } from "next/dist/shared/lib/get-img-props";
 // Mock data for a single booking
 
-const mockBookingDetails = {
-  id: "1",
-  locationName: "LuggageHero Fulton St",
-  address: "123 Fulton St, New York, NY 10038",
-  dropOffDate: new Date("2023-06-01T10:00:00"),
-  pickUpDate: new Date("2023-06-05T14:00:00"),
-  bags: [
-    { size: "small", price: 50, image: "/placeholder.svg" },
-    { size: "medium", price: 75, image: "/placeholder.svg" },
-  ],
-  status: "Active",
-  totalPrice: 125,
-};
+interface OrderDetailsProps {
+  params: Promise<{ orderId: string }>;
+}
 
-export default function OrderDetailsPage({
-  params,
-}: {
-  params: { orderId: string };
-}) {
-  const [booking, setBooking] = useState(mockBookingDetails);
+export default function OrderDetailsPage({ params }: OrderDetailsProps) {
+  const [orderId, setOrderId] = useState<string | null>(null);
   const router = useRouter();
-  const orderId = React.use(params).orderId;
+
+  // Use React.use to unwrap the Promise
+  useEffect(() => {
+    const fetchOrderId = async () => {
+      const resolvedParams = await params; // Unwrap the params Promise
+      setOrderId(resolvedParams.orderId); // Set the orderId
+    };
+
+    fetchOrderId();
+  }, [params]);
 
   useEffect(() => {
     if (orderId) {
@@ -59,19 +75,9 @@ export default function OrderDetailsPage({
   }, [orderId]);
 
   const token = Cookies.get("authToken");
-  // const [orderId, setOrderId] = useState("");
-  const [orderDetails, setOrderDetails] = useState<any>(null);
-  const [loading, setLoading] = useState(true); // Added loading state
-  // In a real application, you would fetch the booking details here
-  // useEffect(() => {
-  //   // Simulating an API call
-  //   // console.log("tookkk", token);
+  const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
 
-  //   // console.log(`Fetching details for order ${params.orderId}`);
-  //   const oid = params.orderId;
-  //   if (oid) setOrderId(oid);
-  //   // setBooking(fetchedBooking)
-  // }, []);
+  const [loading, setLoading] = useState(true); // Added loading state
 
   useEffect(() => {
     const fetchBookingsdetails = async () => {
@@ -112,7 +118,7 @@ export default function OrderDetailsPage({
 
   const handleCancelBooking = () => {
     // Implement cancellation logic here
-    console.log("Cancelling booking:", orderDetails._id);
+    if (orderDetails) console.log("Cancelling booking:", orderDetails._id);
     // After cancellation, you might want to update the order status or redirect
   };
 
@@ -139,14 +145,14 @@ export default function OrderDetailsPage({
           <div className="flex justify-between items-center">
             <div>
               <CardTitle className="text-2xl">Order Details</CardTitle>
-              <CardDescription>Order ID: {orderDetails._id}</CardDescription>
+              <CardDescription>Order ID: {orderDetails?._id}</CardDescription>
             </div>
             <Badge
               variant={
-                orderDetails.status === "Active" ? "default" : "secondary"
+                orderDetails?.status === "Active" ? "default" : "secondary"
               }
             >
-              {orderDetails.status}
+              {orderDetails?.status}
             </Badge>
           </div>
         </CardHeader>
@@ -156,17 +162,27 @@ export default function OrderDetailsPage({
               <h3 className="font-semibold flex items-center">
                 <MapPin className="mr-2 h-4 w-4" /> Store Information
               </h3>
-              <p>{orderDetails.storeName}</p>
+              <p>{orderDetails?.storeName}</p>
               <p className="text-muted-foreground">
-                {orderDetails.storeAddress}
+                {orderDetails?.storeAddress}
               </p>
             </div>
             <div className="space-y-2">
               <h3 className="font-semibold flex items-center">
                 <Calendar className="mr-2 h-4 w-4" /> Booking Dates
               </h3>
-              <p>Pickup: {format(new Date(orderDetails.pickupDate), "PPP")}</p>
-              <p>Return: {format(new Date(orderDetails.returnDate), "PPP")}</p>
+              <p>
+                Pickup:{" "}
+                {orderDetails?.pickupDate
+                  ? format(new Date(orderDetails.pickupDate), "PPP")
+                  : "N/A"}
+              </p>
+              <p>
+                Return:{" "}
+                {orderDetails?.returnDate
+                  ? format(new Date(orderDetails.returnDate), "PPP")
+                  : "N/A"}
+              </p>
             </div>
           </div>
 
@@ -176,9 +192,9 @@ export default function OrderDetailsPage({
             <h3 className="font-semibold mb-2 flex items-center">
               <Package className="mr-2 h-4 w-4" /> Luggage Details
             </h3>
-            <p>Total Bags: {orderDetails.luggage.totalBags}</p>
+            <p>Total Bags: {orderDetails?.luggage.totalBags}</p>
             <ul className="mt-2 space-y-1">
-              {orderDetails.luggage.bags.map((bag) => (
+              {orderDetails?.luggage.bags.map((bag) => (
                 <li
                   key={bag._id}
                   className="flex justify-between items-center bg-muted p-2 rounded"
@@ -197,7 +213,7 @@ export default function OrderDetailsPage({
               <Calendar className="mr-2 h-4 w-4" /> Slot Information
             </h3>
             {/* <p>Date: {format(new Date(orderDetails.slot.date), "PPP")}</p> */}
-            <p>Time: {orderDetails.slot.time}</p>
+            <p>Time: {orderDetails?.slot.time}</p>
           </div>
 
           <Separator />
@@ -207,13 +223,13 @@ export default function OrderDetailsPage({
               <CreditCard className="mr-2 h-4 w-4" /> Payment Information
             </h3>
             <div className="grid gap-2 md:grid-cols-2">
-              <p>Method: {orderDetails.paymentMethod}</p>
-              <p>Status: {orderDetails.paymentStatus}</p>
-              <p>Transaction ID: {orderDetails.transactionId}</p>
+              <p>Method: {orderDetails?.paymentMethod}</p>
+              <p>Status: {orderDetails?.paymentStatus}</p>
+              <p>Transaction ID: {orderDetails?.transactionId}</p>
               {/* <p>Date: {format(new Date(orderDetails.paymentDate), "PPP")}</p> */}
-              <p>Discount: {orderDetails.discount}%</p>
+              <p>Discount: {orderDetails?.discount}%</p>
               <p className="font-medium">
-                Total: {orderDetails.totalAmount} {orderDetails.currency}
+                Total: {orderDetails?.totalAmount} {orderDetails?.currency}
               </p>
             </div>
           </div>
@@ -225,16 +241,19 @@ export default function OrderDetailsPage({
               <ImageIcon className="mr-2 h-4 w-4" /> Images
             </h3>
             <div className="flex flex-wrap gap-4">
-              {orderDetails.images.map((img, index) => (
+              {orderDetails?.images.map((img, index) => (
                 <div
                   key={index}
                   className="relative w-24 h-24 rounded-md overflow-hidden"
                 >
-                  <img
+                  <Image
                     src={img}
-                    alt={`Order image ${index + 1}`}
-                    layout="fill"
-                    objectFit="cover"
+                    alt={`Bag ${
+                      index !== undefined && index !== null ? index + 1 : 0
+                    }`} // Fallback to 0 if index is null or undefined
+                    className="w-full h-full object-cover"
+                    width={500} // Adjust based on the image dimensions
+                    height={500} // Adjust based on the image dimensions
                   />
                 </div>
               ))}

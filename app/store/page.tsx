@@ -37,9 +37,12 @@ export default function AdminDashboard() {
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const token = Cookies.get("authToken");
 
   useEffect(() => {
+    const token = Cookies.get("authToken");
+    if (!token) {
+      throw new Error("Token not found in cookies");
+    }
     const fetchStores = async () => {
       setLoading(true);
       try {

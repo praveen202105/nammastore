@@ -1,7 +1,6 @@
 // pages/api/send-otp.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import nodemailer from "nodemailer";
-import crypto from "crypto";
 import connectToDatabase from "@/lib/db";
 import Otp from "@/models/Otp" // Assuming Otp model is defined
 

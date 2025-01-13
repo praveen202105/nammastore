@@ -1,7 +1,9 @@
+import { ReactNode } from "react"
+
 export interface StorageLocation {
     _id: any
-    capacity: ReactNode
-    pricePerDay: ReactNode
+    capacity: number
+    pricePerDay: number
     timings: ReactNode
     city: ReactNode
     isOpen: any

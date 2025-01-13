@@ -1,47 +1,50 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, MapPinIcon, PackageIcon } from "lucide-react";
+import { CalendarIcon, PackageIcon } from "lucide-react";
 import { format } from "date-fns";
-import axios from "axios";
 import Cookies from "js-cookie";
 
+interface Booking {
+  _id: string;
+  storeId?: {
+    address: string;
+  };
+  pickupDate: string; // Assuming these are strings (could be Date if that's the case)
+  returnDate: string;
+  status: string;
+  luggage: {
+    totalBags: number;
+  };
+}
+
+interface SimplifiedBooking {
+  id: string;
+  locationName: string | undefined;
+  dropOffDate: string;
+  pickUpDate: string;
+  status: string;
+  bags: number;
+}
+
 // Mock data for bookings
-const mockBookings = [
-  {
-    id: "1",
-    locationName: "LuggageHero Fulton St",
-    dropOffDate: new Date("2023-06-01"),
-    pickUpDate: new Date("2023-06-05"),
-    bags: 2,
-    status: "Active",
-  },
-  {
-    id: "2",
-    locationName: "LuggageHero Times Square",
-    dropOffDate: new Date("2023-05-15"),
-    pickUpDate: new Date("2023-05-20"),
-    bags: 1,
-    status: "Completed",
-  },
-  // Add more mock bookings as needed
-];
 
 export default function MyOrdersPage() {
-  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true); // Loading state
-  const [error, setError] = useState(null); // Error state
+  const [error, setError] = useState<string | null>(null); // Allow string or null as the state value
+
   const router = useRouter();
-  const token = Cookies.get("authToken");
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState<Booking[]>([]); // Specify the type of the orders state
+  const [bookings, setBookings] = useState<SimplifiedBooking[]>([]); // Specify the type of the bookings state
 
   useEffect(() => {
     const fetchBookings = async () => {
       try {
+        const token = Cookies.get("authToken");
+
         if (!token) {
           throw new Error("Token not found in cookies");
         }
@@ -62,9 +65,14 @@ export default function MyOrdersPage() {
         const data = await response.json();
         console.log("ddddd ", data.message);
         setOrders(data.orders);
-      } catch (err) {
-        console.error(err);
-        setError(err.message); // Set error message
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          console.error(err);
+          setError(err.message); // Safe to access `message`
+        } else {
+          console.error("An unknown error occurred");
+          setError("An unknown error occurred"); // Handle unknown error case
+        }
       } finally {
         setLoading(false); // Set loading to false after the fetch is done
       }

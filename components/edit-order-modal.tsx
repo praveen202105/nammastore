@@ -39,7 +39,7 @@ interface Order {
 interface EditOrderModalProps {
   order: Order;
   onClose: () => void;
-  onUpdate: (updatedOrder: Order) => void;
+  onUpdate: (updatedOrder: Order) => Promise<void>; // Update to return Promise<void>
 }
 
 export function EditOrderModal({

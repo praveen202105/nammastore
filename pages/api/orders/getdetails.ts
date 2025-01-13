@@ -24,11 +24,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Find the order by ID
-    console.log("decodetoken ",decodedToken);
+    // console.log("decodetoken ",decodedToken);
        // Find the order by ID and populate storeId with name and address
        const order = await Order.findById(orderId).populate("storeId", "name address");
 
-    console.log("oderrr ",order)
+    // console.log("oderrr ",order)
     
     if (decodedToken.role !== 'admin' && order.userId.toString() !== decodedToken.id) {
         return res.status(403).json({ message: 'Forbidden: You are not authorized to access this order' });

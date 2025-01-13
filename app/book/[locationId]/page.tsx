@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -12,7 +12,6 @@ import {
 import {
   CalendarIcon,
   Minus,
-  Plus,
   Star,
   Clock,
   Wifi,
@@ -27,17 +26,14 @@ import { Label } from "@/components/ui/label";
 import Cookies from "js-cookie";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface BagDetails {
   size: "small" | "medium" | "large";
   image: string | null;
 }
 
-export default function BookingPage({
-  params,
-}: {
-  params: { locationId: string };
-}) {
+export default function BookingPage() {
   //   console.log("store id", params.locationId);
   const router = useRouter();
   const cloudName = process.env.NEXT_PUBLIC_CLOUD_NAME || "";
@@ -51,18 +47,54 @@ export default function BookingPage({
   const [pickUpDate, setPickUpDate] = useState<Date | undefined>();
   const [isPickUpOpen, setIsPickUpOpen] = useState(false);
   const [isDropOffOpen, setIsDropOffOpen] = useState(false);
+  const [error, setError] = useState<boolean[]>([]);
+  const [dropError, setDropError] = useState<boolean>(false);
+  const [pickupError, setPickupError] = useState<boolean>(false);
+  const [selectedSlot, setSelectedSlot] = useState<string>("");
+  const [slotError, setSlotError] = useState<boolean>(false);
+  const [totalPrice, setTotalPrice] = useState(0); // State to store the total price
 
   const [bags, setBags] = useState<BagDetails[]>([
     { size: "small", image: null },
   ]);
   const [pricingType, setPricingType] = useState<"daily" | "monthly">("daily");
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   //   const searchParams = useSearchParams();
   const searchParams = useSearchParams();
-  const locationdata = searchParams.get("locationdata"); // Retrieve the stringified location data
+  const locationdata = searchParams ? searchParams.get("locationdata") : null;
+
   const locatio = locationdata ? JSON.parse(locationdata) : null;
+  //   console.log("lllll ", locatio);
+
+  // Move calculateTotalPrice outside the component if it's re-created on every render.
+  const calculateTotalPrice = useCallback(() => {
+    if (!bags || !pricingType) return 0;
+
+    if (pricingType === "daily") {
+      return bags.length * 100;
+    } else {
+      return bags.reduce((total, bag) => {
+        switch (bag.size) {
+          case "small":
+            return total + 500;
+          case "medium":
+            return total + 750;
+          case "large":
+            return total + 1000;
+          default:
+            return total;
+        }
+      }, 0);
+    }
+  }, [bags, pricingType]);
+  useEffect(() => {
+    // Ensure this hook is not called conditionally.
+    if (bags && pricingType) {
+      const price = calculateTotalPrice();
+      setTotalPrice(price);
+    }
+  }, [bags, pricingType, calculateTotalPrice]);
 
   console.log("Location Data: ", locatio);
   if (!locatio) {
@@ -83,12 +115,6 @@ export default function BookingPage({
 
     setIsDropOffOpen(false); // Close the popover after date selection
   };
-
-  const [error, setError] = useState<boolean[]>([]);
-  const [dropError, setDropError] = useState<boolean>(false);
-  const [pickupError, setPickupError] = useState<boolean>(false);
-  const [selectedSlot, setSelectedSlot] = useState<string>("");
-  const [slotError, setSlotError] = useState<boolean>(false);
 
   const handleConfirmBooking = async () => {
     // Check if any bag is missing an image
@@ -148,11 +174,20 @@ export default function BookingPage({
       pricingType,
       selectedSlot,
     });
-    const pickup = new Date(pickUpDate);
-    const dropoff = new Date(dropOffDate);
-    const duration = Math.ceil(
-      (pickup.getTime() - dropoff.getTime()) / (1000 * 60 * 60 * 24)
-    ); // Convert milliseconds to days
+
+    // console.log("p  ", pickUpDate);
+    // console.log("d ", dropOffDate);
+    let timeDifference = 0,
+      duration = 0;
+    if (dropOffDate && pickUpDate) {
+      timeDifference = pickUpDate.getTime() - dropOffDate.getTime();
+
+      // Convert time difference from milliseconds to days
+      duration = Math.ceil(timeDifference / (1000 * 3600 * 24));
+      console.log(`The difference is ${duration} days.`);
+    } else {
+      console.log("Error: dropOffDate or pickUpDate is undefined");
+    }
 
     const payload = {
       storeId: locatio._id, // Replace with the actual store ID
@@ -218,22 +253,6 @@ export default function BookingPage({
     setBags(newBags);
   };
 
-  //   const handleImageUpload = (
-  //     index: number,
-  //     event: React.ChangeEvent<HTMLInputElement>
-  //   ) => {
-  //     const file = event.target.files?.[0];
-  //     if (file) {
-  //       const reader = new FileReader();
-  //       reader.onloadend = () => {
-  //         const newBags = [...bags];
-  //         newBags[index].image = reader.result as string;
-  //         setBags(newBags);
-  //       };
-  //       reader.readAsDataURL(file);
-  //     }
-  //   };
-
   const handleImageUpload = async (
     index: number,
     event: React.ChangeEvent<HTMLInputElement>
@@ -254,12 +273,12 @@ export default function BookingPage({
       }
       setIsLoading(true);
 
-      // Resize the image before uploading (optional, but helpful for reducing size)
-      const resizedImage = await resizeImage(file, 800); // Resize to a max width of 800px
+      //   Resize the image before uploading (optional, but helpful for reducing size)
+      //   const resizedImage = await resizeImage(file, 800); // Resize to a max width of 800px
 
       // Prepare the form data for Cloudinary
       const formData = new FormData();
-      formData.append("file", resizedImage);
+      formData.append("file", file);
       formData.append("upload_preset", cloudPreset); // Replace with your Cloudinary upload preset
       formData.append("cloud_name", cloudName); // Replace with your Cloudinary cloud name
 
@@ -289,94 +308,61 @@ export default function BookingPage({
   };
 
   // Function to resize the image
-  const resizeImage = (file: File, maxWidth: number): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const reader = new FileReader();
+  //   const resizeImage = (file: File, maxWidth: number): Promise<File> => {
+  //     return new Promise((resolve, reject) => {
+  //       const img = new Image();
+  //       const reader = new FileReader();
 
-      reader.onloadend = () => {
-        if (reader.result) {
-          img.src = reader.result as string;
-        }
-      };
+  //       reader.onloadend = () => {
+  //         if (reader.result) {
+  //           img.src = reader.result as string;
+  //         }
+  //       };
 
-      reader.readAsDataURL(file);
+  //       reader.readAsDataURL(file);
 
-      img.onload = () => {
-        // Calculate the new height based on the max width
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
+  //       img.onload = () => {
+  //         // Calculate the new height based on the max width
+  //         const canvas = document.createElement("canvas");
+  //         const ctx = canvas.getContext("2d");
 
-        if (ctx) {
-          const scaleFactor = maxWidth / img.width;
-          canvas.width = maxWidth;
-          canvas.height = img.height * scaleFactor;
+  //         if (ctx) {
+  //           const scaleFactor = maxWidth / img.width;
+  //           canvas.width = maxWidth;
+  //           canvas.height = img.height * scaleFactor;
 
-          // Draw the resized image on the canvas
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  //           // Draw the resized image on the canvas
+  //           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-          // Convert the canvas to a Blob and resolve the promise
-          canvas.toBlob(
-            (blob) => {
-              if (blob) {
-                // Adjust quality here if needed, e.g., 0.8 for 80% quality
-                resolve(new File([blob], file.name, { type: "image/jpeg" }));
-              } else {
-                reject(new Error("Failed to resize image"));
-              }
-            },
-            "image/jpeg",
-            0.8 // Quality (80% quality)
-          );
-        }
-      };
+  //           // Convert the canvas to a Blob and resolve the promise
+  //           canvas.toBlob(
+  //             (blob) => {
+  //               if (blob) {
+  //                 // Adjust quality here if needed, e.g., 0.8 for 80% quality
+  //                 resolve(new File([blob], file.name, { type: "image/jpeg" }));
+  //               } else {
+  //                 reject(new Error("Failed to resize image"));
+  //               }
+  //             },
+  //             "image/jpeg",
+  //             0.8 // Quality (80% quality)
+  //           );
+  //         }
+  //       };
 
-      img.onerror = () => reject(new Error("Failed to load image"));
-    });
-  };
-
-  const [totalPrice, setTotalPrice] = useState(0); // State to store the total price
-
-  const calculateTotalPrice = () => {
-    if (pricingType === "daily") {
-      return bags.length * 100;
-    } else {
-      return bags.reduce((total, bag) => {
-        switch (bag.size) {
-          case "small":
-            return total + 500;
-          case "medium":
-            return total + 750;
-          case "large":
-            return total + 1000;
-          default:
-            return total;
-        }
-      }, 0);
-    }
-  };
-
-  // Call this function whenever necessary to update the total price
-  const updateTotalPrice = () => {
-    const price = calculateTotalPrice();
-    setTotalPrice(price);
-  };
-
-  // Example usage in a button click or effect
-
-  useEffect(() => {
-    updateTotalPrice();
-  }, [bags, pricingType]);
+  //       img.onerror = () => reject(new Error("Failed to load image"));
+  //     });
+  //   };
 
   const isDropOffDateDisabled = (date: Date) => {
     // Disable dates before today
     const today = new Date();
     return date < today;
   };
-  const isPickUpDateDisabled = (date: Date) => {
+  const isPickUpDateDisabled = (date: Date): boolean => {
     // Disable dates before today or after DropOffDate
     const today = new Date();
-    return date < today || (dropOffDate && date < dropOffDate);
+    return date < today || (dropOffDate && date < dropOffDate) ? true : false;
   };
 
   return (
@@ -453,7 +439,7 @@ export default function BookingPage({
                 </p>
               )}
               <p className="text-sm text-muted-foreground mt-2">
-                Open {location.openTime}-{location.closeTime}
+                Open {locatio.openTime}-{locatio.closeTime}
               </p>
             </div>
             <div>
@@ -492,7 +478,7 @@ export default function BookingPage({
                 </p>
               )}
               <p className="text-sm text-muted-foreground mt-2">
-                Open {location.openTime}-{location.closeTime}
+                Open {locatio.openTime}-{locatio.closeTime}
               </p>
             </div>
             <div>
@@ -531,10 +517,12 @@ export default function BookingPage({
                   onClick={() => fileInputRefs.current[index]?.click()}
                 >
                   {bag.image ? (
-                    <img
+                    <Image
                       src={bag.image}
                       alt={`Bag ${index + 1}`}
                       className="w-full h-full object-cover"
+                      width={500} // Adjust based on the image dimensions
+                      height={500} // Adjust based on the image dimensions
                     />
                   ) : (
                     <>
@@ -551,7 +539,10 @@ export default function BookingPage({
                 </div>
                 <Input
                   type="file"
-                  ref={(el) => (fileInputRefs.current[index] = el)}
+                  ref={(el) => {
+                    // This line assigns the element to the `fileInputRefs.current[index]` without returning anything
+                    fileInputRefs.current[index] = el;
+                  }}
                   className="hidden"
                   onChange={(e) => handleImageUpload(index, e)}
                   accept="image/*"

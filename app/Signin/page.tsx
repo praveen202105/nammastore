@@ -1,4 +1,10 @@
 "use client";
+interface DecodedToken {
+  name: string;
+  email: string;
+  picture: string;
+  // Add other properties if needed
+}
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -14,11 +20,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Cookies from "js-cookie";
-import { FcGoogle } from "react-icons/fc";
-import { Loader2, X } from "lucide-react";
+// import { FcGoogle } from "react-icons/fc";
+import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/store/userContext";
-import { GoogleLogin, useGoogleLogin } from "@react-oauth/google";
+import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 export default function SignInPage() {
@@ -80,39 +86,53 @@ export default function SignInPage() {
     router.push("/");
   };
 
-  const handleGoogleLogin = async (response: any) => {
+  const handleGoogleLogin = async (response: CredentialResponse) => {
     setGoogleLoading(true);
     setError(null);
 
     try {
-      const decoded: any = jwtDecode(response.credential);
-      console.log("Decoded User Info:", decoded);
+      if (response.credential) {
+        // Handle the response if credential is available
+        const credential = response.credential;
+        console.log("Google Login Success", credential);
 
-      const userProfile = {
-        name: decoded.name,
-        email: decoded.email,
-        picture: decoded.picture,
-      };
+        const decoded: DecodedToken = jwtDecode<DecodedToken>(
+          response.credential
+        );
 
-      // Post user data to backend
-      const { data } = await axios.post("/api/auth/google", userProfile);
+        console.log("Decoded User Info:", decoded);
 
-      // Assuming data contains the user object and token
-      const { user, token } = data;
+        const userProfile = {
+          name: decoded.name,
+          email: decoded.email,
+          picture: decoded.picture,
+        };
 
-      // Set the user in context
-      setUser(user);
+        // Post user data to backend
+        const { data } = await axios.post("/api/auth/google", userProfile);
 
-      // Set the token in a cookie with an expiration time
-      Cookies.set("authToken", token, { expires: 30 }); // 30 days
+        // Assuming data contains the user object and token
+        const { user, token } = data;
 
-      // console.log("User successfully logged in:", user);
+        // Set the user in context
+        setUser(user);
 
-      // Wait for 2 seconds before navigation
-      setTimeout(() => {
-        router.push("/");
-        setGoogleLoading(false);
-      }, 2000);
+        // Set the token in a cookie with an expiration time
+        Cookies.set("authToken", token, { expires: 30 }); // 30 days
+
+        // console.log("User successfully logged in:", user);
+
+        // Wait for 2 seconds before navigation
+        setTimeout(() => {
+          router.push("/");
+          setGoogleLoading(false);
+        }, 2000);
+        // Proceed with your logic here, e.g., sending the credential to your backend
+      } else {
+        // Handle the case when credential is undefined
+        console.error("Google Login Failed: No credential found");
+        setError("Google Sign-In Failed");
+      }
     } catch (error) {
       console.error("Error decoding token:", error);
       setError("Failed to sign in with Google");

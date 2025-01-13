@@ -10,9 +10,9 @@ import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 
 interface User {
-  name: string;
+  name?: string;
   email: string;
-  profilePic: string;
+  profilePic?: string;
   role: string;
   id: string;
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+// import { Separator } from "@/components/ui/separator";
 // import { Logo } from "@/components/logo"
 
 export default function ProfilePage() {

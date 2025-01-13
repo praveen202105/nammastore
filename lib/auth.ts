@@ -9,7 +9,7 @@ export interface DecodedToken {
 
 export const verifyToken = async (req: NextApiRequest): Promise<DecodedToken | null> => {
   const token = req.headers.authorization?.split(' ')[1]; // Assuming Bearer token
-  console.log("tookkkn ",token);
+  // console.log("tookkkn ",token);
   
   if (!token) return null;
 
@@ -27,7 +27,7 @@ export const verifyToken = async (req: NextApiRequest): Promise<DecodedToken | n
       return null;
     }
   } catch (error) {
-    // console.log("eeeee ",error);
+    console.log("eeeee ",error);
     
     return null;
   }

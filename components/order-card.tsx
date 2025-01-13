@@ -23,10 +23,13 @@ interface Order {
 
 interface OrderCardProps {
   order: Order;
-  onEdit: () => void;
+  // onEdit: () => void;
 }
 
-export function OrderCard({ order, onEdit }: OrderCardProps) {
+export function OrderCard({
+  order,
+}: // , onEdit
+OrderCardProps) {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "confirmed":
@@ -103,7 +106,11 @@ export function OrderCard({ order, onEdit }: OrderCardProps) {
         </div>
       </CardContent>
       <CardFooter className="bg-gray-50 p-4">
-        <Button variant="outline" className="w-full" onClick={onEdit}>
+        <Button
+          variant="outline"
+          className="w-full"
+          //  onClick={onEdit}
+        >
           <EditIcon className="mr-2 h-4 w-4" />
           Edit Order
         </Button>

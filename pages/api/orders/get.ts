@@ -39,7 +39,7 @@ const getOrders = async (req: NextApiRequest, res: NextApiResponse) => {
     console.error("Error fetching orders:", error);
     return res.status(500).json({
       message: "Error fetching orders",
-      error: error.message,
+      // error: error.message,
     });
   }
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Clock, MapPin, Phone, User } from "lucide-react";
+import { Building2, Clock, MapPin, User } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +31,9 @@ export default function CreateStore() {
     description: "",
   });
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: {
+    target: { id: string; value: string | number };
+  }) => {
     const { id, value } = e.target;
 
     // Handle nested object updates for pricePerMonth

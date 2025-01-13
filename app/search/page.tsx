@@ -1,47 +1,106 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+// import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock } from "lucide-react";
-import type { StorageLocation } from "@/types";
+// import type { StorageLocation } from "@/types";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
 
+interface StorageLocation {
+  _id: string;
+  name: string;
+  address: string;
+  city: string;
+  pincode: string;
+  ownerName: string;
+  timings: string;
+  isOpen: boolean;
+  pricePerDay: number;
+  pricePerMonth: { [key: string]: number };
+  capacity: number;
+  contactNumber: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Location type you received from the API
+interface Location {
+  name: string;
+  address: string;
+  city: string;
+  timings: string;
+  isOpen: boolean;
+  pricePerDay: number;
+  capacity: number;
+  _id: string;
+  pincode: string;
+  ownerName: string;
+  contactNumber: string;
+  description: string;
+  // other properties from the API
+}
+
 // Example data from API - replace with actual API call
-const LOCATION_DATA: StorageLocation = {
-  _id: "677a1e3f97aaff83538d60b4",
-  name: "City Luggage Storage",
-  address: "123 Main St, Downtown",
-  city: "Metropolis",
-  pincode: "12345",
-  ownerName: "John Doe",
-  timings: "9:00 AM - 9:00 PM",
-  isOpen: true,
-  pricePerDay: 10,
-  pricePerMonth: {
-    small: 100,
-    medium: 150,
-    large: 200,
-  },
-  capacity: 6,
-  contactNumber: "+1-234-567-8901",
-  description: "Safe and secure luggage storage with 24/7 monitoring.",
-  createdAt: "2025-01-05T05:53:03.722Z",
-  updatedAt: "2025-01-11T13:24:44.356Z",
-};
+// const LOCATION_DATA: StorageLocation = {
+//   _id: "677a1e3f97aaff83538d60b4",
+//   name: "City Luggage Storage",
+//   address: "123 Main St, Downtown",
+//   city: "Metropolis",
+//   pincode: "12345",
+//   ownerName: "John Doe",
+//   timings: "9:00 AM - 9:00 PM",
+//   isOpen: true,
+//   pricePerDay: 10,
+//   pricePerMonth: {
+//     small: 100,
+//     medium: 150,
+//     large: 200,
+//   },
+//   capacity: 6,
+//   contactNumber: "+1-234-567-8901",
+//   description: "Safe and secure luggage storage with 24/7 monitoring.",
+//   createdAt: "2025-01-05T05:53:03.722Z",
+//   updatedAt: "2025-01-11T13:24:44.356Z",
+// };
+interface Data {
+  locations?: Location[]; // locations can be undefined or an array of Location objects
+}
 
 export default function SearchPage() {
-  const searchParams = useSearchParams();
-  const [locations, setLocations] = useState<StorageLocation[]>([
-    LOCATION_DATA,
-  ]);
+  //   const searchParams = useSearchParams();
+  const [locations, setLocations] = useState<StorageLocation[]>([]);
+
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const token = Cookies.get("authToken");
+  const transformToStorageLocation = (location: Location): StorageLocation => {
+    return {
+      _id: location._id, // Add logic to handle or generate _id
+      name: location.name,
+      address: location.address,
+      city: location.city,
+      pincode: location.pincode, // Add default or logic to handle
+      ownerName: location.ownerName, // Add logic to handle
+      timings: location.timings,
+      isOpen: location.isOpen,
+      pricePerDay: location.pricePerDay,
+      pricePerMonth: { small: 0, medium: 0, large: 0 }, // Set default or handle
+      capacity: location.capacity,
+      contactNumber: location.contactNumber, // Add logic to handle
+      description: location.description, // Add logic to handle
+      createdAt: new Date().toISOString(), // Handle properly
+      updatedAt: new Date().toISOString(), // Handle properly
+    };
+  };
   useEffect(() => {
+    const token = Cookies.get("authToken");
+    if (!token) {
+      throw new Error("Token not found in cookies");
+    }
     const fetchLocations = async () => {
       try {
         setLoading(true);
@@ -60,12 +119,22 @@ export default function SearchPage() {
           throw new Error("Failed to fetch locations");
         }
 
-        const data: StorageLocation[] = await response.json();
-        console.log("ddd ", data.locations);
+        // const data: StorageLocation[] = await response.json();
+        const data: Data = await response.json(); // Or however you get your data
 
-        setLocations(data.locations);
-      } catch (err) {
-        setError(err.message || "Something went wrong");
+        if (data.locations) {
+          // Transform the locations data
+          const transformedLocations = data.locations.map(
+            transformToStorageLocation
+          );
+          setLocations(transformedLocations);
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message || "Something went wrong");
+        } else {
+          setError("An unknown error occurred");
+        }
       } finally {
         setLoading(false);
       }
@@ -97,6 +166,7 @@ export default function SearchPage() {
       </div>
     );
   }
+  console.log("lllll ", locations);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -123,7 +193,7 @@ export default function SearchPage() {
                       {location.timings}
                     </span>
                     <Badge
-                      variant={location.isOpen ? "success" : "destructive"}
+                    //   variant={location.isOpen ? "success" : "destructive"}
                     >
                       {location.isOpen ? "Open" : "Closed"}
                     </Badge>

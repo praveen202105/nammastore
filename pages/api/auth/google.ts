@@ -2,7 +2,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import connectToDatabase from "@/lib/db";
 import jwt from 'jsonwebtoken'; // You need to install jsonwebtoken package
 import User from '@/models/User'; // Import your user model
-const SECRET_KEY = process.env.JWT_SECRET// You should store this in an environment variable
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Connect to the database
