@@ -50,7 +50,7 @@ export default function MyOrdersPage() {
         }
         console.log("tokenn ", token);
 
-        const response = await fetch("http://localhost:3000/api/orders/get", {
+        const response = await fetch("/api/orders/get", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
