@@ -1,13 +1,13 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock, ZoomIn, ZoomOut, Layers, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
-import { OlaMaps } from "@/sdk/OlaMapsWebSDKNew";
+// import { OlaMaps } from "@/sdk/OlaMapsWebSDKNew";
 
 interface StorageLocation {
   _id: string;
@@ -50,11 +50,23 @@ interface Data {
   locations?: Location[];
 }
 
+import { Suspense } from "react";
+
 export default function SearchPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SearchContent />
+    </Suspense>
+  );
+}
+
+function SearchContent() {
+  const router = useRouter();
   const apiKey = process.env.NEXT_PUBLIC_MAP_KEY || "";
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const location = searchParams?.get("location") || "No location provided";
+  const location = searchParams?.get("location") || ""; // Read the "location" parameter
+  console.log("llll  ", location);
+
   const [locations, setLocations] = useState<StorageLocation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,44 +86,53 @@ export default function SearchPage() {
   useEffect(() => {
     // console.log("ccc", container);
 
-    if (!OlaMaps || !coordinates || !container) return;
+    if (!coordinates || !container) return;
+    import("@/sdk/OlaMapsWebSDKNew").then((module) => {
+      const { OlaMaps } = module;
+      // initialize and render map here
 
-    const olaMaps = new OlaMaps({ apiKey });
+      const olaMaps = new OlaMaps({ apiKey });
 
-    // Initialize the map
-    const myMap = olaMaps.init({
-      style:
-        "https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json",
-      container: "map", // The ID of your map container
-      //   center: [80.9462, 26.8467], // Default center
-      zoom: 20,
-    });
+      // Initialize the map
+      const myMap = olaMaps.init({
+        style:
+          "https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json",
+        container: "map", // The ID of your map container
+        //   center: [80.9462, 26.8467], // Default center
+        zoom: 20,
+      });
 
-    // Calculate dynamic center
-    const calculateCenter = () => {
-      if (locations.length > 0) {
-        const totalLocations = locations.length;
-        const totalLat = locations.reduce((sum, loc) => sum + loc.latitude, 0);
-        const totalLng = locations.reduce((sum, loc) => sum + loc.longitude, 0);
+      // Calculate dynamic center
+      const calculateCenter = () => {
+        if (locations.length > 0) {
+          const totalLocations = locations.length;
+          const totalLat = locations.reduce(
+            (sum, loc) => sum + loc.latitude,
+            0
+          );
+          const totalLng = locations.reduce(
+            (sum, loc) => sum + loc.longitude,
+            0
+          );
 
-        const centerLat = totalLat / totalLocations;
-        const centerLng = totalLng / totalLocations;
-        return [centerLng, centerLat];
-      }
+          const centerLat = totalLat / totalLocations;
+          const centerLng = totalLng / totalLocations;
+          return [centerLng, centerLat];
+        }
 
-      return [coordinates.longitude, coordinates.latitude]; // Fallback to a default center
-    };
+        return [coordinates.longitude, coordinates.latitude]; // Fallback to a default center
+      };
 
-    const calculatedCenter = calculateCenter();
-    myMap.setCenter(calculatedCenter);
+      const calculatedCenter = calculateCenter();
+      myMap.setCenter(calculatedCenter);
 
-    // Iterate through the locations array and add a marker for each
-    locations.forEach((location) => {
-      const popup = // .setHTML(
-        //   `<div style="color: black;"><strong>${location.name}</strong></div>`
-        // ); // Styled text as black
-        olaMaps.addPopup({ offset: [0, -30], anchor: "bottom" }) // Offset adjusted for popup above the marker
-          .setHTML(`
+      // Iterate through the locations array and add a marker for each
+      locations.forEach((location) => {
+        const popup = // .setHTML(
+          //   `<div style="color: black;"><strong>${location.name}</strong></div>`
+          // ); // Styled text as black
+          olaMaps.addPopup({ offset: [0, -30], anchor: "bottom" }) // Offset adjusted for popup above the marker
+            .setHTML(`
         <div class="text-black p-3 min-w-[150px] font-sans">
           <div class="flex items-center gap-2 mb-2">
             <span class="px-2 py-1 rounded-full text-white text-sm" 
@@ -144,17 +165,18 @@ export default function SearchPage() {
         </div>
       `);
 
-      olaMaps
-        .addMarker({ offset: [0, -9], anchor: "bottom", color: "black" }) // Offset adjusted for marker alignment
-        .setLngLat([location.longitude, location.latitude]) // lng, lat order
-        .setPopup(popup) // Associate the popup with the marker
-        .addTo(myMap); // Add the marker (and popup) to the map
-    });
+        olaMaps
+          .addMarker({ offset: [0, -9], anchor: "bottom", color: "black" }) // Offset adjusted for marker alignment
+          .setLngLat([location.longitude, location.latitude]) // lng, lat order
+          .setPopup(popup) // Associate the popup with the marker
+          .addTo(myMap); // Add the marker (and popup) to the map
+      });
 
-    // Center the map on the coordinates
-    // myMap.setCenter([coordinates.longitude, coordinates.latitude]);
-    // myMap.setCenter([80.9462, 26.8467]);
-    myMap.setZoom(10);
+      // Center the map on the coordinates
+      // myMap.setCenter([coordinates.longitude, coordinates.latitude]);
+      // myMap.setCenter([80.9462, 26.8467]);
+      myMap.setZoom(10);
+    });
   }, [coordinates, container, apiKey, locations]);
 
   //   console.log("location ", locations);
