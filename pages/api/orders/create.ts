@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import Order from  "@/models/Order";;  // Import Order model
+import Order from '@/models/Order';  // Import Order model
 import Store from '@/models/Store';  // Import Store model
 import { verifyToken } from '@/lib/auth';
 import connectToDatabase from '@/lib/db';
@@ -11,12 +11,10 @@ const createOrder = async (req: NextApiRequest, res: NextApiResponse) => {
       storeId,
       luggage,
       duration,
-      price,
-      status,
       pickupDate,
+      pickupTime,
       returnDate,
-      images,
-      slot,
+      returnTime,
       paymentMethod,
       paymentStatus,
       transactionId,
@@ -24,7 +22,7 @@ const createOrder = async (req: NextApiRequest, res: NextApiResponse) => {
       discount,
       totalAmount,
       currency,
-      aadhaar,
+      // aadhaar,
     } = req.body;
 
     try {
@@ -36,7 +34,7 @@ const createOrder = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(401).json({ message: 'Unauthorized' });
       }
 
-      if (!storeId || !luggage || !pickupDate || !returnDate) {
+      if (!storeId || !luggage || !pickupDate || !returnDate || !totalAmount || !pickupTime || !returnTime) {
         return res.status(400).json({ message: 'Missing required fields' });
       }
 
@@ -47,7 +45,7 @@ const createOrder = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       // Calculate the new availability (decrease by total bags)
-      const totalBags = luggage.totalBags;
+      const totalBags = luggage.length;
       const newAvailability = store.capacity - totalBags;
 
       if (newAvailability < 0) {
@@ -56,24 +54,26 @@ const createOrder = async (req: NextApiRequest, res: NextApiResponse) => {
 
       // Create a new order
       const newOrder = new Order({
-        userId:user.id,
+        userId: user.id,
         storeId,
         luggage,
         duration,
-        price,
-        status,
-        pickupDate,
-        returnDate,
-        images,
-        slot,
+        pickup: {
+          date: pickupDate,
+          time: pickupTime,  // Assuming pickup time is passed in the body
+        },
+        return: {
+          date: returnDate,
+          time: returnTime,  // Assuming return time is passed in the body
+        },
         paymentMethod,
-        paymentStatus,
+        paymentStatus: paymentStatus || 'pending',  // Default to 'pending' if not provided
         transactionId,
         paymentDate,
         discount,
         totalAmount,
-        currency,
-        aadhaar,
+        currency: currency || 'INR',  // Default to INR if not provided
+        // aadhaar,
       });
 
       // Save the order to the database

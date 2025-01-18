@@ -20,7 +20,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     pricePerMonth,
     contactNumber,
     description,
-    capacity
+    capacity,
+    email,
+    images,
+    latitude,
+    longitude,
+    amenities,
   } = req.body;
 
   if (
@@ -33,7 +38,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     !pricePerDay ||
     !pricePerMonth ||
     !capacity ||
-    !contactNumber
+    !contactNumber ||
+    !email ||
+    !latitude ||
+    !longitude ||
+    !amenities
   ) {
     return res.status(400).json({ message: 'All fields are required except description' });
   }
@@ -43,9 +52,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) throw new Error('Missing token');
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_secret_key') as { role: string };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_secret_key') as {
+      email: string; role: string 
+};
     if (decoded.role !== 'admin') throw new Error('Unauthorized');
-
+     console.log("dd ",decoded);
+     
     await connectToDatabase();
 
     const store = new Store({
@@ -55,12 +67,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       pincode,
       ownerName,
       timings,
-      isOpen: isOpen ?? false, // Defaults to true
+      isOpen: isOpen ?? false, // Defaults to false if not provided
       pricePerDay,
       pricePerMonth,
       contactNumber,
       description,
-      capacity
+      capacity,
+      email,
+      images,
+      latitude,
+      longitude,
+      amenities,
+      createdBy:decoded.email
     });
 
     await store.save();

@@ -6,7 +6,7 @@ interface DecodedToken {
   // Add other properties if needed
 }
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,21 +22,38 @@ import {
 import Cookies from "js-cookie";
 // import { FcGoogle } from "react-icons/fc";
 import { X } from "lucide-react";
-import { useRouter } from "next/navigation";
+
 import { useUser } from "@/store/userContext";
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
+import { useRouter, useSearchParams } from "next/navigation";
+// import { useRouter } from "next/router";
 export default function SignInPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SignInForm />
+    </Suspense>
+  );
+}
+function SignInForm() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
-  const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [signUpEmail, setSignUpEmail] = useState("");
+  const [signUpPassword, setSignUpPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const { setUser } = useUser();
+  // const { callback } = router.query;
+  const searchParams = useSearchParams();
+  // const callback = new URLSearchParams(window.location.search).get("callback");
+  const callback = searchParams?.get("callback") || "No location provided";
+  // console.log("callback  ", callback);
 
-  const router = useRouter();
+  // console.log("ccc", callback);
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,10 +71,9 @@ export default function SignInPage() {
 
       // Assuming data contains the user object and token
       const { user, token } = data;
-      console.log("dd", data);
+      // console.log("dd", data);
 
       // Set the user in context
-      setUser(user);
 
       // Set the token in a cookie with an expiration time
       Cookies.set("authToken", token, { expires: 30 }); // 30 days
@@ -66,7 +82,10 @@ export default function SignInPage() {
 
       // Wait for 2 seconds before navigation
       setTimeout(() => {
-        router.push("/");
+        setUser(user);
+
+        router.push("/"); // Default redirect after sign-in
+
         setLoading(false);
       }, 2000);
     } catch (error) {
@@ -76,10 +95,39 @@ export default function SignInPage() {
     }
   };
 
-  const handleMobileSignIn = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle mobile sign in
-    console.log("Sign in with mobile:", mobile, "password:", password);
+    setLoading(true);
+    setError(null);
+
+    if (signUpPassword !== confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data } = await axios.post("/api/auth/signup", {
+        email: signUpEmail,
+        password: signUpPassword,
+      });
+
+      const { user, token } = data;
+
+      Cookies.set("authToken", token, { expires: 30 });
+
+      setTimeout(() => {
+        setUser(user);
+
+        router.push("/");
+
+        setLoading(false);
+      }, 2000);
+    } catch (error) {
+      console.error("Error signing up:", error);
+      setError("Failed to sign up");
+      setLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -115,7 +163,6 @@ export default function SignInPage() {
         const { user, token } = data;
 
         // Set the user in context
-        setUser(user);
 
         // Set the token in a cookie with an expiration time
         Cookies.set("authToken", token, { expires: 30 }); // 30 days
@@ -124,7 +171,17 @@ export default function SignInPage() {
 
         // Wait for 2 seconds before navigation
         setTimeout(() => {
-          router.push("/");
+          setUser(user);
+          if (callback) {
+            // console.log("callbacj hai");
+
+            router.push(callback); // Redirect to the callback URL
+          } else {
+            // console.log("callback nhi hai");
+
+            router.push("/"); // Default redirect after sign-in
+          }
+
           setGoogleLoading(false);
         }, 2000);
         // Proceed with your logic here, e.g., sending the credential to your backend
@@ -152,16 +209,16 @@ export default function SignInPage() {
           <X className="h-4 w-4" />
         </Button>
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
+          <CardTitle>Sign In or Sign Up</CardTitle>
           <CardDescription>
-            Choose your preferred sign in method
+            Create an account or sign in to continue
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="email">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="email">E-mail</TabsTrigger>
-              <TabsTrigger value="mobile">Mobile</TabsTrigger>
+              <TabsTrigger value="email">Sign In</TabsTrigger>
+              <TabsTrigger value="mobile">Sign Up</TabsTrigger>
             </TabsList>
             <TabsContent value="email">
               <form onSubmit={handleEmailSignIn}>
@@ -199,31 +256,42 @@ export default function SignInPage() {
               </form>
             </TabsContent>
             <TabsContent value="mobile">
-              <form onSubmit={handleMobileSignIn}>
+              <form onSubmit={handleSignUp}>
                 <div className="grid w-full items-center gap-4">
                   <div className="flex flex-col space-y-1.5">
-                    <Label htmlFor="mobile">Mobile number</Label>
+                    <Label htmlFor="mobile">Email</Label>
                     <Input
-                      id="mobile"
-                      type="tel"
-                      placeholder="Enter your mobile number"
-                      value={mobile}
-                      onChange={(e) => setMobile(e.target.value)}
+                      id="signup-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={signUpEmail}
+                      onChange={(e) => setSignUpEmail(e.target.value)}
                     />
                   </div>
                   <div className="flex flex-col space-y-1.5">
-                    <Label htmlFor="mobile-password">Password</Label>
+                    <Label htmlFor="signup-password">Password</Label>
                     <Input
-                      id="mobile-password"
+                      id="signup-password"
                       type="password"
                       placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={signUpPassword}
+                      onChange={(e) => setSignUpPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1.5">
+                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="Confirm your password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
                     />
                   </div>
                 </div>
+
                 <Button className="w-full mt-6" type="submit">
-                  Sign in with mobile
+                  Sign Up
                 </Button>
               </form>
             </TabsContent>

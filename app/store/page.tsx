@@ -1,5 +1,5 @@
 "use client";
-
+//all store dashboard
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -152,7 +152,7 @@ export default function AdminDashboard() {
                       key={store._id}
                       onClick={() => {
                         console.log(`Clicked Store ID: ${store._id}`);
-                        router.push(`store/orders/${store._id}`);
+                        router.push(`store/store-orders/${store._id}`);
                       }}
                       className="cursor-pointer hover:bg-gray-100"
                     >

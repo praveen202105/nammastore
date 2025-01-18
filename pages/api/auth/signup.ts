@@ -9,10 +9,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const { name, email, password, role } = req.body;
+  const { email, password, role } = req.body;
 
-  if (!name || !email || !password) {
-    return res.status(400).json({ message: 'Name, email, and password are required' });
+  if ( !email || !password) {
+    return res.status(400).json({ message: 'email, and password are required' });
   }
 
   await connectToDatabase();
@@ -25,7 +25,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const hashedPassword = await bcrypt.hash(password, 10);
 
   const user = new User({ 
-    name, 
     email, 
     password: hashedPassword, 
     role: role || "user" // Default role is "user" if not provided
@@ -45,7 +44,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     token,
     user: {
       id: user._id,
-      name: user.name,
       email: user.email,
       role: user.role,
     },

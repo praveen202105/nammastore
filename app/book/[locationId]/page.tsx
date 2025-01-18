@@ -32,6 +32,91 @@ interface BagDetails {
   size: "small" | "medium" | "large";
   image: string | null;
 }
+interface TimeSlotPickerProps {
+  availableSlots: string[]; // An array of time slots as strings
+  selectedTime: string; // The currently selected time slot
+  onTimeChange: (time: string) => void; // A function to handle time changes
+}
+
+const availableSlots: string[] = [
+  "12:00 AM",
+  "1:00 AM",
+  "2:00 AM",
+  "3:00 AM",
+  "4:00 AM",
+  "5:00 AM",
+  "6:00 AM",
+  "7:00 AM",
+  "8:00 AM",
+  "9:00 AM",
+  "10:00 AM",
+  "11:00 AM",
+  "12:00 PM",
+  "1:00 PM",
+  "2:00 PM",
+  "3:00 PM",
+  "4:00 PM",
+  "5:00 PM",
+  "6:00 PM",
+  "7:00 PM",
+  "8:00 PM",
+  "9:00 PM",
+  "10:00 PM",
+  "11:00 PM",
+];
+
+const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
+  availableSlots,
+  selectedTime,
+  onTimeChange,
+}) => {
+  return (
+    <div>
+      {/* Uncomment if you want a label */}
+      {/* <label className="text-sm font-medium mb-2 block">Select Time Slot</label> */}
+      <select
+        value={selectedTime}
+        onChange={(e) => onTimeChange(e.target.value)}
+        className="w-auto p-2 border rounded-md"
+      >
+        {availableSlots.map((slot, index) => (
+          <option key={index} value={slot}>
+            {slot}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
+
+// Function to convert 12-hour format time to 24-hour format and return as Date
+const formatTime = (timeString: string): number => {
+  const [hour, minutePart] = timeString.split(":");
+  const [minute, period] = minutePart.split(" ");
+  let hour24: number = parseInt(hour, 10);
+
+  if (period === "PM" && hour24 < 12) hour24 += 12;
+  if (period === "AM" && hour24 === 12) hour24 = 0;
+
+  return new Date().setHours(hour24, parseInt(minute, 10), 0, 0); // Convert to Date object
+};
+
+// Function to get the next available time slot from the list
+const getNextAvailableTime = (slots: string[]): string | null => {
+  const now: Date = new Date();
+  let nextAvailableSlot: string | null = null;
+
+  for (const slot of slots) {
+    const slotTime: number = formatTime(slot);
+    if (slotTime > now.getTime()) {
+      // Compare time in milliseconds
+      nextAvailableSlot = slot;
+      break;
+    }
+  }
+
+  return nextAvailableSlot;
+};
 
 export default function BookingPage() {
   //   console.log("store id", params.locationId);
@@ -50,9 +135,41 @@ export default function BookingPage() {
   const [error, setError] = useState<boolean[]>([]);
   const [dropError, setDropError] = useState<boolean>(false);
   const [pickupError, setPickupError] = useState<boolean>(false);
-  const [selectedSlot, setSelectedSlot] = useState<string>("");
-  const [slotError, setSlotError] = useState<boolean>(false);
   const [totalPrice, setTotalPrice] = useState(0); // State to store the total price
+  const [dropOffTime, setDropOffTime] = useState(""); // Track selected drop-off time
+  const [pickupTime, setPickupTime] = useState(""); // Track selected pickup time
+
+  useEffect(() => {
+    const nextTime = getNextAvailableTime(availableSlots);
+    if (nextTime) {
+      setDropOffTime(nextTime);
+
+      // Calculate pickup time (1 hour after the drop-off time)
+      const nextHour = new Date();
+      const [hour, minute] = nextTime
+        .split(":")
+        .map((part) => parseInt(part.replace(/[^0-9]/g, "")));
+      const ampm = nextTime.split(" ")[1].toLowerCase();
+      let pickupHour = hour;
+
+      if (ampm === "pm" && hour < 12) {
+        pickupHour += 12;
+      } else if (ampm === "am" && hour === 12) {
+        pickupHour = 0;
+      }
+
+      // Add one hour to the drop-off time
+      nextHour.setHours(pickupHour + 1);
+      nextHour.setMinutes(minute);
+
+      // Format the pickup time (back to 12-hour format)
+      const pickupFormatted = `${nextHour.getHours() % 12 || 12}:${nextHour
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")} ${nextHour.getHours() >= 12 ? "PM" : "AM"}`;
+      setPickupTime(pickupFormatted);
+    }
+  }, []);
 
   const [bags, setBags] = useState<BagDetails[]>([
     { size: "small", image: null },
@@ -96,7 +213,7 @@ export default function BookingPage() {
     }
   }, [bags, pricingType, calculateTotalPrice]);
 
-  console.log("Location Data: ", locatio);
+  //   console.log("Location Data: ", locatio);
   if (!locatio) {
     return <p>Loading location details...</p>;
   }
@@ -145,19 +262,10 @@ export default function BookingPage() {
       setDropError(false);
     }
 
-    // Validate slot selection
-    if (!selectedSlot) {
-      setSlotError(true);
-      hasError = true;
-    } else {
-      setSlotError(false);
-    }
-
     setTimeout(() => {
       setError([]);
       setDropError(false);
       setPickupError(false);
-      setSlotError(false);
     }, 3000);
 
     // If there's any error, stop submission
@@ -172,7 +280,6 @@ export default function BookingPage() {
       pickUpDate,
       bags,
       pricingType,
-      selectedSlot,
     });
 
     // console.log("p  ", pickUpDate);
@@ -191,24 +298,17 @@ export default function BookingPage() {
 
     const payload = {
       storeId: locatio._id, // Replace with the actual store ID
-      luggage: {
-        totalBags: bags.length,
-        bags: bags.map((bag) => ({
-          size: bag.size,
-          weight: bag.size === "small" ? 10 : bag.size === "medium" ? 15 : 20, // Set weight based on size
-          image: bag.image, // Include the image URL
-        })),
-      },
+      luggage: bags.map((bag) => ({
+        size: bag.size,
+        weight: bag.size === "small" ? 10 : bag.size === "medium" ? 15 : 20, // Set weight based on size
+        image: bag.image, // Include the image URL
+      })),
       duration,
       totalAmount: totalPrice, // Total price
-      status: "confirmed", // Booking status
-      pickupDate: pickUpDate,
-      returnDate: dropOffDate,
-      images: bags.map((bag) => bag.image), // Collect images
-      slot: {
-        date: selectedSlot,
-        time: selectedSlot,
-      },
+      pickupDate: dropOffDate,
+      returnDate: pickUpDate,
+      pickupTime: dropOffTime,
+      returnTime: pickupTime,
     };
     try {
       const response = await fetch("/api/orders/create", {
@@ -365,6 +465,22 @@ export default function BookingPage() {
     return date < today || (dropOffDate && date < dropOffDate) ? true : false;
   };
 
+  const handleTimeChange = (time: string, type: "drop" | "pickup") => {
+    if (type === "drop") {
+      setDropOffTime(time);
+    } else {
+      setPickupTime(time);
+    }
+  };
+
+  //   const handleDropDateSelect = (date: Date) => {
+  //     setDropOffDate(date);
+  //   };
+
+  //   const handlePickupDateSelect = (date: Date) => {
+  //     setPickupDate(date);
+  //   };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
@@ -406,103 +522,103 @@ export default function BookingPage() {
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <label className="text-sm font-medium mb-2 block">Drop off</label>
-              <Popover open={isDropOffOpen} onOpenChange={setIsDropOffOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !dropOffDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dropOffDate ? (
-                      format(dropOffDate, "PPP")
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dropOffDate}
-                    onSelect={handleDropDateSelect}
-                    initialFocus
-                    disabled={isDropOffDateDisabled}
+              <div className="flex col">
+                <Popover open={isDropOffOpen} onOpenChange={setIsDropOffOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-[60%] justify-start text-left font-normal",
+                        !dropOffDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dropOffDate ? (
+                        format(dropOffDate, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dropOffDate}
+                      onSelect={handleDropDateSelect}
+                      initialFocus
+                      disabled={isDropOffDateDisabled}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <div className="ml-2">
+                  <TimeSlotPicker
+                    availableSlots={availableSlots}
+                    selectedTime={dropOffTime}
+                    onTimeChange={(time: string) =>
+                      handleTimeChange(time, "drop")
+                    }
                   />
-                </PopoverContent>
-              </Popover>
+                </div>
+              </div>
               {dropError && (
                 <p className="text-red-500 text-sm mt-2">
                   Drop Off date is required.
                 </p>
               )}
-              <p className="text-sm text-muted-foreground mt-2">
+              {/* <p className="text-sm text-muted-foreground mt-2">
                 Open {locatio.openTime}-{locatio.closeTime}
-              </p>
+              </p> */}
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Pick up</label>
-              <Popover open={isPickUpOpen} onOpenChange={setIsPickUpOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !pickUpDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {pickUpDate ? (
-                      format(pickUpDate, "PPP")
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={pickUpDate}
-                    // onSelect={setPickUpDate}
-                    onSelect={handlePickupDateSelect}
-                    initialFocus
-                    disabled={isPickUpDateDisabled}
+              <div className="flex col">
+                <Popover open={isPickUpOpen} onOpenChange={setIsPickUpOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-[60%] justify-start text-left font-normal",
+                        !pickUpDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {pickUpDate ? (
+                        format(pickUpDate, "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={pickUpDate}
+                      // onSelect={setPickUpDate}
+                      onSelect={handlePickupDateSelect}
+                      initialFocus
+                      disabled={isPickUpDateDisabled}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <div className="ml-2">
+                  <TimeSlotPicker
+                    availableSlots={availableSlots}
+                    selectedTime={pickupTime}
+                    onTimeChange={(time: string) =>
+                      handleTimeChange(time, "pickup")
+                    }
                   />
-                </PopoverContent>
-              </Popover>
+                </div>
+              </div>
               {pickupError && (
                 <p className="text-red-500 text-sm mt-2">
                   Pickup date is required.
                 </p>
               )}
-              <p className="text-sm text-muted-foreground mt-2">
+              {/* <p className="text-sm text-muted-foreground mt-2">
                 Open {locatio.openTime}-{locatio.closeTime}
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Select Slot
-              </label>
-              <select
-                className="w-full p-2 border border-gray-300 rounded-md"
-                value={selectedSlot}
-                onChange={(e) => setSelectedSlot(e.target.value)}
-              >
-                <option value="">Select a slot</option>
-                {/* Example slot options, you can populate this dynamically */}
-                <option value="morning">Morning (9:00 AM - 12:00 PM)</option>
-                <option value="afternoon">
-                  Afternoon (12:00 PM - 3:00 PM)
-                </option>
-                <option value="evening">Evening (3:00 PM - 6:00 PM)</option>
-              </select>
-              {slotError && (
-                <p className="text-red-500 text-sm mt-2">
-                  Slot selection is required.
-                </p>
-              )}
+              </p> */}
             </div>
           </div>
         </div>
@@ -633,16 +749,13 @@ export default function BookingPage() {
               <div className="flex justify-between">
                 <span>Storage for {bags.length} bag(s)</span>
                 <span>
-                  {totalPrice} / {pricingType}
+                  ₹{totalPrice} / {pricingType}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span>Service charge</span>
-                <span>50</span>
-              </div>
+
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
-                <span>{totalPrice + 50}</span>
+                <span>₹{totalPrice}</span>
               </div>
             </div>
           </div>

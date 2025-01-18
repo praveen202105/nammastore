@@ -8,7 +8,7 @@ export function Footer() {
         <div className="flex flex-col items-center">
           <div className="flex items-center mb-4">
             <Luggage className="h-6 w-6 text-primary mr-2" />
-            <span className="font-bold text-xl text-primary">LuggageHero</span>
+            <span className="font-bold text-xl text-primary">NammaStore</span>
           </div>
           <nav className="flex flex-wrap justify-center gap-6 mb-6">
             <Link

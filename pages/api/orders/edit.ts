@@ -4,31 +4,27 @@ import Store from '@/models/Store'; // Store model
 import { verifyToken } from '@/lib/auth'; // Token verification utility
 import connectToDatabase from '@/lib/db';
 
-// Create an API to edit an order (Admin only)
+type LuggageItem = {
+  size: string;
+  weight: number;
+  image: string;
+};
+
+type UpdateFields = {
+  luggage?: LuggageItem[];
+  [key: string]: string | number | boolean | LuggageItem[] | undefined; // Define possible field types
+
+};
+
 const editOrder = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'PUT') {
     const { orderId } = req.query; // Get orderId from query params
-    const {
-      luggage,
-      duration,
-      price,
-      status,
-      pickupDate,
-      returnDate,
-      slot,
-      paymentMethod,
-      paymentStatus,
-      transactionId,
-      paymentDate,
-      discount,
-      totalAmount,
-      aadhaar,
-    } = req.body;
+    const updateFields: UpdateFields = req.body; // Get fields to update from the request body
 
     // Verify the token to ensure the user is an admin
     const decodedToken = await verifyToken(req);
-    if (!decodedToken || decodedToken.role !== 'admin') {
-      return res.status(403).json({ message: 'Unauthorized: Only admin can edit orders' });
+    if (!decodedToken) {
+      return res.status(403).json({ message: 'Unauthorized to edit orders' });
     }
 
     try {
@@ -41,16 +37,20 @@ const editOrder = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       // Calculate the previous total number of bags in the order
-      const previousTotalBags = order.luggage.totalBags;
+      const previousTotalBags = order.luggage.reduce(
+        (total: number, item: LuggageItem) => total + (item.weight || 0),
+        0
+      );
 
-      // Update the order with new luggage if provided
-      if (luggage) {
-        order.luggage = luggage;
+      // Handle luggage updates and adjust store availability
+      if (updateFields.luggage) {
+        order.luggage = updateFields.luggage;
 
-        // Update total bags
-        const newTotalBags = luggage.totalBags;
+        const newTotalBags = updateFields.luggage.reduce(
+          (total: number, item: LuggageItem) => total + (item.weight || 0),
+          0
+        );
 
-        // Check if store's capacity needs adjustment
         if (newTotalBags !== previousTotalBags) {
           const store = await Store.findById(order.storeId);
           if (!store) {
@@ -68,20 +68,14 @@ const editOrder = async (req: NextApiRequest, res: NextApiResponse) => {
         }
       }
 
-      // Update other fields of the order
-      order.duration = duration || order.duration;
-      order.price = price || order.price;
-      order.status = status || order.status;
-      order.pickupDate = pickupDate || order.pickupDate;
-      order.returnDate = returnDate || order.returnDate;
-      order.slot = slot || order.slot;
-      order.paymentMethod = paymentMethod || order.paymentMethod;
-      order.paymentStatus = paymentStatus || order.paymentStatus;
-      order.transactionId = transactionId || order.transactionId;
-      order.paymentDate = paymentDate || order.paymentDate;
-      order.discount = discount || order.discount;
-      order.totalAmount = totalAmount || order.totalAmount;
-      order.aadhaar = aadhaar || order.aadhaar;
+      // Dynamically update fields in the order
+      Object.entries(updateFields).forEach(([key, value]) => {
+        if (key !== 'luggage') {
+          if (key in order) {
+            (order as Record<string, unknown>)[key] = value;
+          }
+        }
+      });
 
       // Save the updated order
       await order.save();

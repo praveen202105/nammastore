@@ -2,53 +2,54 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, PackageIcon } from "lucide-react";
-import { format } from "date-fns";
+import { CalendarIcon, PackageIcon, MapPinIcon, ClockIcon } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import Cookies from "js-cookie";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
-interface Booking {
+interface Order {
   _id: string;
-  storeId?: {
+  storeId: {
+    _id: string;
+    name: string;
     address: string;
   };
-  pickupDate: string; // Assuming these are strings (could be Date if that's the case)
-  returnDate: string;
-  status: string;
-  luggage: {
-    totalBags: number;
+  pickup: {
+    date: string;
+    time: string;
   };
-}
-
-interface SimplifiedBooking {
-  id: string;
-  locationName: string | undefined;
-  dropOffDate: string;
-  pickUpDate: string;
+  return: {
+    date: string;
+    time: string;
+  };
+  luggage: Array<{
+    size: string;
+    weight: number;
+    image: string;
+    _id: string;
+  }>;
   status: string;
-  bags: number;
+  totalAmount: number;
+  currency: string;
 }
-
-// Mock data for bookings
 
 export default function MyOrdersPage() {
-  const [loading, setLoading] = useState(true); // Loading state
-  const [error, setError] = useState<string | null>(null); // Allow string or null as the state value
-
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const [orders, setOrders] = useState<Booking[]>([]); // Specify the type of the orders state
-  const [bookings, setBookings] = useState<SimplifiedBooking[]>([]); // Specify the type of the bookings state
+  const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    const fetchBookings = async () => {
+    const fetchOrders = async () => {
       try {
         const token = Cookies.get("authToken");
-
         if (!token) {
+          router.push("/signin");
           throw new Error("Token not found in cookies");
         }
-        console.log("tokenn ", token);
 
         const response = await fetch("/api/orders/get", {
           method: "GET",
@@ -63,52 +64,57 @@ export default function MyOrdersPage() {
         }
 
         const data = await response.json();
-        console.log("ddddd ", data.message);
         setOrders(data.orders);
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          console.error(err);
-          setError(err.message); // Safe to access `message`
-        } else {
-          console.error("An unknown error occurred");
-          setError("An unknown error occurred"); // Handle unknown error case
-        }
+      } catch (err) {
+        console.error(err);
+        setError(
+          err instanceof Error ? err.message : "An unknown error occurred"
+        );
       } finally {
-        setLoading(false); // Set loading to false after the fetch is done
+        setLoading(false);
       }
     };
 
-    fetchBookings();
-  }, []);
-
-  useEffect(() => {
-    if (orders.length > 0) {
-      const simplifiedBookings = orders.map((booking) => ({
-        id: booking._id,
-        locationName: booking.storeId?.address,
-        dropOffDate: booking.pickupDate,
-        pickUpDate: booking.returnDate,
-        status: booking.status,
-        bags: booking.luggage.totalBags,
-      }));
-      console.log("oo", simplifiedBookings);
-      setBookings(simplifiedBookings);
-    }
-  }, [orders]);
+    fetchOrders();
+  }, [router]);
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-full">
-        <span>Loading...</span>{" "}
-        {/* You can replace this with a spinner or loading animation */}
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-6">My Orders</h1>
+        <div className="grid gap-6">
+          {[...Array(3)].map((_, index) => (
+            <Card key={index}>
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
+                  <div className="space-y-2 w-full md:w-2/3">
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-4 w-1/3" />
+                  </div>
+                  <div className="space-y-2 w-full md:w-1/3 md:text-right">
+                    <Skeleton className="h-8 w-24 md:ml-auto" />
+                    <Skeleton className="h-10 w-32 md:ml-auto" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-full text-red-600">
-        <span>{error}</span> {/* Display error message */}
+      <div className="container mx-auto px-4 py-8">
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
+          <strong className="font-bold">Error: </strong>
+          <span className="block sm:inline">{error}</span>
+        </div>
       </div>
     );
   }
@@ -117,46 +123,62 @@ export default function MyOrdersPage() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">My Orders</h1>
       <div className="grid gap-6">
-        {bookings.map((booking) => (
-          <Card key={booking.id} className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+        {orders.map((order) => (
+          <Card key={order._id} className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex justify-between items-center">
+                <span>{order.storeId.name}</span>
+                <Badge
+                  className={
+                    order.status === "Confirmed"
+                      ? "bg-green-600"
+                      : order.status === "Cancelled"
+                      ? "bg-red-600"
+                      : "bg-gray-600"
+                  }
+                >
+                  {order.status}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pr-6 pl-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
                 <div className="space-y-2">
-                  <h2 className="text-xl font-semibold">
-                    {booking.locationName}
-                  </h2>
+                  <div className="flex items-center text-muted-foreground">
+                    <MapPinIcon className="mr-2 h-4 w-4" />
+                    <span>{order.storeId.address}</span>
+                  </div>
                   <div className="flex items-center text-muted-foreground">
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     <span>
-                      {format(booking.dropOffDate, "MMM d, yyyy")} -{" "}
-                      {format(booking.pickUpDate, "MMM d, yyyy")}
+                      {format(parseISO(order.pickup.date), "MMM d, yyyy")} -{" "}
+                      {format(parseISO(order.return.date), "MMM d, yyyy")}
+                    </span>
+                  </div>
+                  <div className="flex items-center text-muted-foreground">
+                    <ClockIcon className="mr-2 h-4 w-4" />
+                    <span>
+                      {order.pickup.time} - {order.return.time}
                     </span>
                   </div>
                   <div className="flex items-center text-muted-foreground">
                     <PackageIcon className="mr-2 h-4 w-4" />
                     <span>
-                      {booking.bags} {booking.bags === 1 ? "bag" : "bags"}
+                      {order.luggage.length}{" "}
+                      {order.luggage.length === 1 ? "bag" : "bags"}
                     </span>
                   </div>
                 </div>
-                <div className="mt-4 md:mt-0 space-y-2 md:text-right">
-                  <div
-                    className={`inline-block px-2 py-1 rounded-full text-sm font-medium ${
-                      booking.status === "confirmed"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
+                <div className="space-y-2 md:text-right">
+                  <div className="text-lg font-semibold">
+                    {order.totalAmount} {order.currency}
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/bookings/${order._id}`)}
                   >
-                    {booking.status}
-                  </div>
-                  <div>
-                    <Button
-                      variant="outline"
-                      onClick={() => router.push(`/bookings/${booking.id}`)}
-                    >
-                      View Details
-                    </Button>
-                  </div>
+                    View Details
+                  </Button>
                 </div>
               </div>
             </CardContent>

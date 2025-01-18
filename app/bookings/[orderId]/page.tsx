@@ -1,37 +1,34 @@
 "use client";
-interface Luggage {
-  totalBags: number;
-  bags: { _id: string; size: string; weight: number }[];
-}
 
 interface OrderDetails {
   _id: string;
   status: string;
-  storeName: string;
-  storeAddress: string;
-  pickupDate: string;
-  returnDate: string;
-  luggage: Luggage;
-  slot: { time: string };
-  paymentMethod: string;
+  storeId: {
+    name: string;
+    address: string;
+  };
+  pickup: {
+    date: string;
+    time: string;
+  };
+  return: {
+    date: string;
+    time: string;
+  };
+  luggage: {
+    size: string;
+    weight: number;
+    image: string;
+  }[];
+  duration: number;
   paymentStatus: string;
-  transactionId: string;
-  discount: number;
   totalAmount: number;
   currency: string;
-  images: string[];
 }
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  Calendar,
-  MapPin,
-  Package,
-  CreditCard,
-  ImageIcon,
-} from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Package, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import Cookies from "js-cookie";
 import { Button } from "@/components/ui/button";
@@ -54,6 +51,7 @@ interface OrderDetailsProps {
 
 export default function OrderDetailsPage({ params }: OrderDetailsProps) {
   const [orderId, setOrderId] = useState<string | null>(null);
+
   const router = useRouter();
 
   // Use React.use to unwrap the Promise
@@ -103,6 +101,8 @@ export default function OrderDetailsPage({ params }: OrderDetailsProps) {
         }
 
         const data = await response.json();
+        console.log("ddd ", data.order);
+
         setOrderDetails(data.order);
         // console.log("ddddd ", data);
         // setOrders(data.orders);
@@ -116,10 +116,34 @@ export default function OrderDetailsPage({ params }: OrderDetailsProps) {
     if (orderId) fetchBookingsdetails();
   }, [token, orderId]);
 
-  const handleCancelBooking = () => {
-    // Implement cancellation logic here
-    if (orderDetails) console.log("Cancelling booking:", orderDetails._id);
-    // After cancellation, you might want to update the order status or redirect
+  const handleCancelBooking = async () => {
+    if (!orderDetails) return;
+
+    try {
+      const response = await fetch(
+        `/api/orders/edit?orderId=${orderDetails._id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // Include the token if necessary
+          },
+          body: JSON.stringify({ status: "Cancelled" }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to cancel booking");
+      }
+
+      const data = await response.json();
+      console.log("Booking cancelled successfully:", data);
+
+      // Update the UI to reflect the cancellation
+      setOrderDetails((prev) => prev && { ...prev, status: "Cancelled" });
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+    }
   };
 
   if (loading) {
@@ -131,15 +155,12 @@ export default function OrderDetailsPage({ params }: OrderDetailsProps) {
     );
   }
 
-  console.log("orderr ", orderDetails);
-
   return (
     <div className="container mx-auto px-4 py-8">
       <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to My Orders
       </Button>
-
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -147,9 +168,14 @@ export default function OrderDetailsPage({ params }: OrderDetailsProps) {
               <CardTitle className="text-2xl">Order Details</CardTitle>
               <CardDescription>Order ID: {orderDetails?._id}</CardDescription>
             </div>
+
             <Badge
-              variant={
-                orderDetails?.status === "Active" ? "default" : "secondary"
+              className={
+                orderDetails?.status === "Confirmed"
+                  ? "bg-green-600"
+                  : orderDetails?.status === "Cancelled"
+                  ? "bg-red-600"
+                  : "bg-gray-600"
               }
             >
               {orderDetails?.status}
@@ -162,9 +188,9 @@ export default function OrderDetailsPage({ params }: OrderDetailsProps) {
               <h3 className="font-semibold flex items-center">
                 <MapPin className="mr-2 h-4 w-4" /> Store Information
               </h3>
-              <p>{orderDetails?.storeName}</p>
+              <p>{orderDetails?.storeId.name}</p>
               <p className="text-muted-foreground">
-                {orderDetails?.storeAddress}
+                {orderDetails?.storeId.address}
               </p>
             </div>
             <div className="space-y-2">
@@ -172,17 +198,20 @@ export default function OrderDetailsPage({ params }: OrderDetailsProps) {
                 <Calendar className="mr-2 h-4 w-4" /> Booking Dates
               </h3>
               <p>
-                Pickup:{" "}
-                {orderDetails?.pickupDate
-                  ? format(new Date(orderDetails.pickupDate), "PPP")
-                  : "N/A"}
+                Drop-off:{" "}
+                {orderDetails?.pickup?.date
+                  ? format(new Date(orderDetails.pickup.date), "PPP")
+                  : "N/A"}{" "}
+                at {orderDetails?.pickup?.time || "N/A"}
               </p>
               <p>
-                Return:{" "}
-                {orderDetails?.returnDate
-                  ? format(new Date(orderDetails.returnDate), "PPP")
-                  : "N/A"}
+                Pick-up:{" "}
+                {orderDetails?.return?.date
+                  ? format(new Date(orderDetails?.return?.date), "PPP")
+                  : "N/A"}{" "}
+                at {orderDetails?.return?.time || "N/A"}
               </p>
+              <p>Duration: {orderDetails?.duration ?? "N/A"} days</p>
             </div>
           </div>
 
@@ -192,28 +221,29 @@ export default function OrderDetailsPage({ params }: OrderDetailsProps) {
             <h3 className="font-semibold mb-2 flex items-center">
               <Package className="mr-2 h-4 w-4" /> Luggage Details
             </h3>
-            <p>Total Bags: {orderDetails?.luggage.totalBags}</p>
-            <ul className="mt-2 space-y-1">
-              {orderDetails?.luggage.bags.map((bag) => (
-                <li
-                  key={bag._id}
-                  className="flex justify-between items-center bg-muted p-2 rounded"
+            <p>Total Bags: {orderDetails?.luggage.length}</p>
+            <div className="mt-2 space-y-4">
+              {orderDetails?.luggage.map((bag, index) => (
+                <div
+                  key={index}
+                  className="flex items-center space-x-4 bg-muted p-2 rounded"
                 >
-                  <span>{bag.size}</span>
-                  <span>{bag.weight} kg</span>
-                </li>
+                  <Image
+                    src={bag.image}
+                    alt={`Bag ${index + 1}`}
+                    width={60}
+                    height={60}
+                    className="rounded-md object-cover"
+                  />
+                  <div>
+                    <p className="font-medium">{bag.size} bag</p>
+                    <p className="text-sm text-muted-foreground">
+                      {bag.weight} kg
+                    </p>
+                  </div>
+                </div>
               ))}
-            </ul>
-          </div>
-
-          <Separator />
-
-          <div>
-            <h3 className="font-semibold mb-2 flex items-center">
-              <Calendar className="mr-2 h-4 w-4" /> Slot Information
-            </h3>
-            {/* <p>Date: {format(new Date(orderDetails.slot.date), "PPP")}</p> */}
-            <p>Time: {orderDetails?.slot.time}</p>
+            </div>
           </div>
 
           <Separator />
@@ -223,11 +253,7 @@ export default function OrderDetailsPage({ params }: OrderDetailsProps) {
               <CreditCard className="mr-2 h-4 w-4" /> Payment Information
             </h3>
             <div className="grid gap-2 md:grid-cols-2">
-              <p>Method: {orderDetails?.paymentMethod}</p>
               <p>Status: {orderDetails?.paymentStatus}</p>
-              <p>Transaction ID: {orderDetails?.transactionId}</p>
-              {/* <p>Date: {format(new Date(orderDetails.paymentDate), "PPP")}</p> */}
-              <p>Discount: {orderDetails?.discount}%</p>
               <p className="font-medium">
                 Total: {orderDetails?.totalAmount} {orderDetails?.currency}
               </p>
@@ -236,46 +262,15 @@ export default function OrderDetailsPage({ params }: OrderDetailsProps) {
 
           <Separator />
 
-          <div>
-            <h3 className="font-semibold mb-2 flex items-center">
-              <ImageIcon className="mr-2 h-4 w-4" /> Images
-            </h3>
-            <div className="flex flex-wrap gap-4">
-              {orderDetails?.images.map((img, index) => (
-                <div
-                  key={index}
-                  className="relative w-24 h-24 rounded-md overflow-hidden"
-                >
-                  <Image
-                    src={img}
-                    alt={`Bag ${
-                      index !== undefined && index !== null ? index + 1 : 0
-                    }`} // Fallback to 0 if index is null or undefined
-                    className="w-full h-full object-cover"
-                    width={500} // Adjust based on the image dimensions
-                    height={500} // Adjust based on the image dimensions
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <Separator />
-          {/* 
-          <div>
-            <h3 className="font-semibold mb-2 flex items-center">
-              <FileText className="mr-2 h-4 w-4" /> Aadhaar
-            </h3>
-            <p>{orderDetails.aadhaar}</p>
-          </div> */}
-
-          {/* {orderDetails.status === "Active" && ( */}
           <div className="flex justify-end mt-6">
-            <Button variant="destructive" onClick={handleCancelBooking}>
+            <Button
+              variant="destructive"
+              disabled={orderDetails?.status !== "Pending"}
+              onClick={handleCancelBooking}
+            >
               Cancel Booking
             </Button>
           </div>
-          {/* )} */}
         </CardContent>
       </Card>
     </div>

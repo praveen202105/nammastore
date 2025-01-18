@@ -1,14 +1,13 @@
 "use client";
 
-// import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Clock } from "lucide-react";
-// import type { StorageLocation } from "@/types";
-import Link from "next/link";
+import { MapPin, Clock, ZoomIn, ZoomOut, Layers, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
+import { OlaMaps } from "@/sdk/OlaMapsWebSDKNew";
 
 interface StorageLocation {
   _id: string;
@@ -26,9 +25,10 @@ interface StorageLocation {
   description: string;
   createdAt: string;
   updatedAt: string;
+  latitude: number;
+  longitude: number;
 }
 
-// Location type you received from the API
 interface Location {
   name: string;
   address: string;
@@ -42,91 +42,190 @@ interface Location {
   ownerName: string;
   contactNumber: string;
   description: string;
-  // other properties from the API
+  latitude: number;
+  longitude: number;
 }
 
-// Example data from API - replace with actual API call
-// const LOCATION_DATA: StorageLocation = {
-//   _id: "677a1e3f97aaff83538d60b4",
-//   name: "City Luggage Storage",
-//   address: "123 Main St, Downtown",
-//   city: "Metropolis",
-//   pincode: "12345",
-//   ownerName: "John Doe",
-//   timings: "9:00 AM - 9:00 PM",
-//   isOpen: true,
-//   pricePerDay: 10,
-//   pricePerMonth: {
-//     small: 100,
-//     medium: 150,
-//     large: 200,
-//   },
-//   capacity: 6,
-//   contactNumber: "+1-234-567-8901",
-//   description: "Safe and secure luggage storage with 24/7 monitoring.",
-//   createdAt: "2025-01-05T05:53:03.722Z",
-//   updatedAt: "2025-01-11T13:24:44.356Z",
-// };
 interface Data {
-  locations?: Location[]; // locations can be undefined or an array of Location objects
+  locations?: Location[];
 }
 
 export default function SearchPage() {
-  //   const searchParams = useSearchParams();
+  const apiKey = process.env.NEXT_PUBLIC_MAP_KEY || "";
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const location = searchParams?.get("location") || "No location provided";
   const [locations, setLocations] = useState<StorageLocation[]>([]);
-
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [container, setContainer] = useState<HTMLElement | null>(null);
+  const con = document.getElementById("map");
+  useEffect(() => {
+    // Get the container only once after the component mounts
+
+    setContainer(con);
+  }, [con]); // Empty dependency array ensures this runs only once
+
+  const [coordinates, setCoordinates] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+
+  useEffect(() => {
+    // console.log("ccc", container);
+
+    if (!OlaMaps || !coordinates || !container) return;
+
+    const olaMaps = new OlaMaps({ apiKey });
+
+    // Initialize the map
+    const myMap = olaMaps.init({
+      style:
+        "https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json",
+      container: "map", // The ID of your map container
+      //   center: [80.9462, 26.8467], // Default center
+      zoom: 20,
+    });
+
+    // Calculate dynamic center
+    const calculateCenter = () => {
+      if (locations.length > 0) {
+        const totalLocations = locations.length;
+        const totalLat = locations.reduce((sum, loc) => sum + loc.latitude, 0);
+        const totalLng = locations.reduce((sum, loc) => sum + loc.longitude, 0);
+
+        const centerLat = totalLat / totalLocations;
+        const centerLng = totalLng / totalLocations;
+        return [centerLng, centerLat];
+      }
+
+      return [coordinates.longitude, coordinates.latitude]; // Fallback to a default center
+    };
+
+    const calculatedCenter = calculateCenter();
+    myMap.setCenter(calculatedCenter);
+
+    // Iterate through the locations array and add a marker for each
+    locations.forEach((location) => {
+      const popup = // .setHTML(
+        //   `<div style="color: black;"><strong>${location.name}</strong></div>`
+        // ); // Styled text as black
+        olaMaps.addPopup({ offset: [0, -30], anchor: "bottom" }) // Offset adjusted for popup above the marker
+          .setHTML(`
+        <div class="text-black p-3 min-w-[150px] font-sans">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="px-2 py-1 rounded-full text-white text-sm" 
+              style="background: ${location.isOpen ? "#22c55e" : "#94a3b8"};">
+              ${location.isOpen ? "Open" : "Closed"}
+            </span>
+            <div class="flex items-center text-sm text-gray-500">
+              ⭐ 4.8
+            </div>
+          </div>
+          
+          <h3 class="font-semibold text-lg mb-1">${location.name}</h3>
+          
+          
+          <div class="flex items-center gap-1 text-gray-500 text-sm mb-3">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" 
+              viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 6v6l4 2"></path>
+            </svg>
+            ${location.timings}
+          </div>
+          
+          <div class="flex justify-between items-center mt-2">
+            <div>
+              <div class="text-gray-500 text-xs">from</div>
+              <div class="font-semibold">₹${location.pricePerDay}/day</div>
+            </div>
+          </div>
+        </div>
+      `);
+
+      olaMaps
+        .addMarker({ offset: [0, -9], anchor: "bottom", color: "black" }) // Offset adjusted for marker alignment
+        .setLngLat([location.longitude, location.latitude]) // lng, lat order
+        .setPopup(popup) // Associate the popup with the marker
+        .addTo(myMap); // Add the marker (and popup) to the map
+    });
+
+    // Center the map on the coordinates
+    // myMap.setCenter([coordinates.longitude, coordinates.latitude]);
+    // myMap.setCenter([80.9462, 26.8467]);
+    myMap.setZoom(10);
+  }, [coordinates, container, apiKey, locations]);
+
+  //   console.log("location ", locations);
+
+  const getGeolocation = async () => {
+    try {
+      const { coords } = await new Promise<GeolocationPosition>(
+        (resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject)
+      );
+      setCoordinates({
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      });
+    } catch {
+      setError("Failed to get geolocation.");
+    }
+  };
+
+  // Trigger geolocation fetch when the component mounts
+  useEffect(() => {
+    getGeolocation();
+  }, []);
+
   const transformToStorageLocation = (location: Location): StorageLocation => {
     return {
-      _id: location._id, // Add logic to handle or generate _id
+      _id: location._id,
       name: location.name,
       address: location.address,
       city: location.city,
-      pincode: location.pincode, // Add default or logic to handle
-      ownerName: location.ownerName, // Add logic to handle
+      pincode: location.pincode,
+      ownerName: location.ownerName,
       timings: location.timings,
       isOpen: location.isOpen,
       pricePerDay: location.pricePerDay,
-      pricePerMonth: { small: 0, medium: 0, large: 0 }, // Set default or handle
+      pricePerMonth: { small: 0, medium: 0, large: 0 },
       capacity: location.capacity,
-      contactNumber: location.contactNumber, // Add logic to handle
-      description: location.description, // Add logic to handle
-      createdAt: new Date().toISOString(), // Handle properly
-      updatedAt: new Date().toISOString(), // Handle properly
+      contactNumber: location.contactNumber,
+      description: location.description,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      latitude: location.latitude,
+      longitude: location.longitude,
     };
   };
+
   useEffect(() => {
-    const token = Cookies.get("authToken");
-    if (!token) {
-      throw new Error("Token not found in cookies");
-    }
     const fetchLocations = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Replace this URL with your actual API endpoint
-        // const response = await fetch("/api/store/getAllstore");
-        const response = await fetch("/api/store/getAllstore", {
+        const response = await fetch(`/api/store/getbycity?city=${location}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
         });
+
         if (!response.ok) {
           throw new Error("Failed to fetch locations");
         }
 
-        // const data: StorageLocation[] = await response.json();
-        const data: Data = await response.json(); // Or however you get your data
+        const data: Data = await response.json();
+        // console.log("aaa ", data.locations);
 
         if (data.locations) {
-          // Transform the locations data
           const transformedLocations = data.locations.map(
             transformToStorageLocation
           );
+
           setLocations(transformedLocations);
         }
       } catch (err: unknown) {
@@ -141,7 +240,25 @@ export default function SearchPage() {
     };
 
     fetchLocations();
-  }, []);
+  }, [location]);
+
+  const handleBookNow = (locationId: string, locationData: StorageLocation) => {
+    const token = Cookies.get("authToken");
+
+    if (!token) {
+      router.push(
+        `/signin?callback=${encodeURIComponent(
+          `/book/${locationId}?locationdata=${JSON.stringify(locationData)}`
+        )}`
+      );
+    } else {
+      router.push(
+        `/book/${locationId}?locationdata=${encodeURIComponent(
+          JSON.stringify(locationData)
+        )}`
+      );
+    }
+  };
 
   if (loading) {
     return (
@@ -166,72 +283,134 @@ export default function SearchPage() {
       </div>
     );
   }
-  console.log("lllll ", locations);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Available Storage Locations</h1>
-      <div className="grid gap-6">
-        {locations.map((location) => (
-          <Card
-            key={location._id}
-            className="hover:shadow-lg transition-shadow"
-          >
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row justify-between gap-6">
-                <div className="space-y-4">
-                  <h3 className="text-xl font-semibold">{location.name}</h3>
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground mt-1" />
-                    <p className="text-muted-foreground">
-                      {location.address}, {location.city}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {location.timings}
-                    </span>
-                    <Badge
-                    //   variant={location.isOpen ? "success" : "destructive"}
-                    >
-                      {location.isOpen ? "Open" : "Closed"}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="md:text-right space-y-4">
-                  <div>
-                    <p className="text-2xl font-bold text-blue-600">
-                      ${location.pricePerDay}/day
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Starting from
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">
-                      {location.capacity} spots available
-                    </p>
-                  </div>
-                  {/* <Button className="w-full md:w-auto" asChild>
-                    <Link href={`/book/${location._id}`}>Book now</Link>
-                  </Button> */}
-
-                  <Button className="w-full md:w-auto" asChild>
-                    <Link
-                      href={{
-                        pathname: `/book/${location._id}`,
-                        query: { locationdata: JSON.stringify(location) }, // Correct stringification
-                      }}
-                    >
-                      Book now
-                    </Link>
-                  </Button>
-                </div>
+    <div className="min-h-screen bg-[#f5f9fc]">
+      {/* Top Search Bar */}
+      <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 flex items-center gap-4">
+              <div className="relative flex-1">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={location}
+                  readOnly
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg bg-gray-50"
+                />
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Clock className="h-4 w-4" />
+                <span>Tomorrow</span>
+                <span className="px-2 py-1 bg-gray-100 rounded">2 bags</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm">
+                km / miles
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex h-[calc(100vh-73px)]">
+        {/* Left Side - Location List */}
+        <div className="w-[450px] border-r bg-white overflow-y-auto">
+          <div className="p-4">
+            <h2 className="text-lg font-semibold mb-4">
+              Storage Locations in {location}
+            </h2>
+            <div className="space-y-4">
+              {locations.map((loc) => (
+                <Card
+                  key={loc._id}
+                  className="border-0 shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge
+                            // variant={loc.isOpen ? "success" : "secondary"}
+                            className="rounded-full text-xs"
+                          >
+                            {loc.isOpen ? "Open" : "Closed"}
+                          </Badge>
+                          <div className="flex items-center">
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            <span className="text-sm ml-1">4.8</span>
+                          </div>
+                        </div>
+                        <h3 className="font-semibold text-lg mb-1">
+                          {loc.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {loc.address}
+                        </p>
+                        <div className="flex items-center text-sm text-gray-500">
+                          <Clock className="h-4 w-4 mr-1" />
+                          {loc.timings}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="mb-2">
+                          <p className="text-sm text-gray-600">from</p>
+                          <p className="font-semibold">
+                            ₹{loc.pricePerDay.toFixed(2)}/day
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => handleBookNow(loc._id, loc)}
+                          className="w-full bg-[#4bb4f8] hover:bg-[#3aa3e7] text-white"
+                        >
+                          Book now
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side - Map */}
+        <div id="map" className="flex-1 relative">
+          {/* <div id="mapContainer" className="w-full h-full"></div> */}
+          <div className="absolute top-4 right-4 flex flex-col space-y-2">
+            <Button
+              //   onClick={toggleMapStyle}
+              className="bg-white text-gray-800 hover:bg-gray-100 shadow-md"
+              size="icon"
+            >
+              <Layers className="h-5 w-5" />
+            </Button>
+            <Button
+              //   onClick={() => mapInstanceRef.current?.zoomIn()}
+              onClick={() => {
+                console.log("aaaa");
+                //  mapInstanceRef.current?.zoomIn()
+                // olaMapsRef.current?.on("zoomstart", () => {
+                //   console.log("zoom called");
+                // })
+              }}
+              className="bg-white text-gray-800 hover:bg-gray-100 shadow-md"
+              size="icon"
+            >
+              <ZoomIn className="h-5 w-5" />
+            </Button>
+            <Button
+              //   onClick={() => mapInstanceRef.current?.zoomOut()}
+              className="bg-white text-gray-800 hover:bg-gray-100 shadow-md"
+              size="icon"
+            >
+              <ZoomOut className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

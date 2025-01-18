@@ -4,22 +4,19 @@ export interface IOrder extends Document {
   userId: mongoose.Types.ObjectId;  // Reference to the user placing the order
   storeId: mongoose.Types.ObjectId;  // Reference to the store where luggage will be stored
   luggage: {
-    totalBags: number;               // Total number of bags
-    bags: {                          // Array of objects containing size and weight of each bag
-      size: string;                   // Size of the luggage (small, medium, large)
-      weight: number;                 // Weight of the luggage in kg or lbs
-    }[];
-  };
+    size: string;    // Size of the luggage (small, medium, large)
+    weight: number;  // Weight of the luggage in kg or lbs
+    image: string;   // Image URL of the luggage
+  }[];  // Array of luggage objects
   duration: number;                  // Duration of storage in days or months
-  price: number;                     // Price calculated based on luggage size and duration
+  // price: number;                     // Price calculated based on luggage size and duration
   status: string;                    // Status of the order (pending, confirmed, completed, etc.)
   pickupDate: Date;                  // Date when the luggage will be picked up
   returnDate: Date;                  // Date when the luggage will be returned
-  images: string[];                  // Array of image URLs for the luggage
-  slot: {                            // Object containing drop off date and time
-    date: Date;                      // Date of the luggage drop-off
-    time: string;                    // Time for the luggage drop-off (e.g., '10:00 AM')
-  };
+  // images: string[];                  // Array of image URLs for the luggage
+  pickup: { date: Date; time: string }; // Date and time when the luggage will be picked up
+  return: { date: Date; time: string }; // Date and time when the luggage will be returned
+  verified: boolean; // Whether the order is verified or not
 
   // Payment Details
   paymentMethod: string;             // Payment method (e.g., 'credit card', 'paypal')
@@ -38,23 +35,30 @@ const OrderSchema: Schema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     storeId: { type: Schema.Types.ObjectId, ref: 'Store', required: true },
-    luggage: {
-      totalBags: { type: Number, required: true },  // Total number of bags
-      bags: [{
-        size: { type: String, required: true },  // Size of the luggage
+    luggage: [
+      {
+        size: { type: String, required: true },   // Size of the luggage (small, medium, large)
         weight: { type: Number, required: true }, // Weight of the luggage
-      }],
-    },
+        image: { type: String, required: true },  // Image URL of the luggage
+      },
+    ],
     duration: { type: Number, required: true },  // Can be in days or months
     // price: { type: Number, required: true },
-    status: { type: String, enum: ['pending', 'confirmed', 'cancelled', 'completed'], required: true },
-    pickupDate: { type: Date, required: true },
-    returnDate: { type: Date, required: true },
-    images: { type: [String], required: false }, // Array of image URLs
-    slot: {                                    // Object for drop-off date and time
-      date: { type: String, required: true },     // Drop-off date
-      time: { type: String, required: true },   // Drop-off time (e.g., '10:00 AM')
+    status: {
+      type: String,
+      enum: ['Pending', 'Confirmed', 'Checked In', 'Checked Out', 'Completed', 'Cancelled'],
+      default: 'Pending',
+      required: true
+    },pickup: {
+      date: { type: Date, required: true }, // Pickup date
+      time: { type: String, required: true }, // Pickup time
     },
+    return: {
+      date: { type: Date, required: true }, // Return date
+      time: { type: String, required: true }, // Return time
+    },
+    verified: { type: Boolean, default: false }, // Order verified status
+
 
     // Payment Details
     paymentMethod: { type: String, 

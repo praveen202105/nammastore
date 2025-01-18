@@ -54,21 +54,10 @@ export function Navigation() {
       <div className="container flex h-16 items-center">
         <Link href="/" className="flex items-center space-x-2">
           <Luggage className="h-6 w-6 text-primary" />
-          <span className="font-bold text-xl text-primary">LuggageHero</span>
+          <span className="font-bold text-xl text-primary">NammaStore</span>
         </Link>
 
         <nav className="flex items-center space-x-6 ml-6">
-          <Link
-            href="/how-it-works"
-            className={`text-sm font-medium transition-colors hover:text-primary ${
-              pathname === "/how-it-works"
-                ? "text-primary"
-                : "text-muted-foreground"
-            }`}
-          >
-            How it works
-          </Link>
-
           {user?.role == "admin" && (
             <>
               <Link
