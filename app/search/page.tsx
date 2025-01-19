@@ -338,7 +338,7 @@ function SearchContent() {
       </div>
 
       {/* Main Content */}
-      <div className="flex h-[calc(100vh-73px)]">
+      <div className="flex h-[calc(100vh-73px)] ">
         {/* Left Side - Location List */}
         <div className="w-[450px] border-r bg-white overflow-y-auto">
           <div className="p-4">
