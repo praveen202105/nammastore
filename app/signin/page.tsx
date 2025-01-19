@@ -172,15 +172,8 @@ function SignInForm() {
         // Wait for 2 seconds before navigation
         setTimeout(() => {
           setUser(user);
-          if (callback) {
-            // console.log("callbacj hai");
 
-            router.push(callback); // Redirect to the callback URL
-          } else {
-            // console.log("callback nhi hai");
-
-            router.push("/"); // Default redirect after sign-in
-          }
+          router.push("/"); // Default redirect after sign-in
 
           setGoogleLoading(false);
         }, 2000);
