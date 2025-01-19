@@ -27,7 +27,7 @@ import { useUser } from "@/store/userContext";
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 // import { useRouter } from "next/router";
 export default function SignInPage() {
   return (
@@ -48,9 +48,9 @@ function SignInForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const { setUser } = useUser();
   // const { callback } = router.query;
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
   // const callback = new URLSearchParams(window.location.search).get("callback");
-  const callback = searchParams?.get("callback") || "No location provided";
+  // const callback = searchParams?.get("callback") || "No location provided";
   // console.log("callback  ", callback);
 
   // console.log("ccc", callback);
