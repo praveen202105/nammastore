@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MapPin, Search, Loader2 } from "lucide-react";
+import { MapPin, Search, Loader2, Locate } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -186,13 +186,55 @@ export function SearchForm() {
       setTimeout(() => setError(""), 2000);
       return;
     }
-    console.log("sss ", selectedLocation);
+    // console.log("sss ", selectedLocation);
 
     const searchParams = new URLSearchParams({
       location: selectedLocation?.city || "",
     });
 
     router.push(`/search?${searchParams.toString()}`);
+  };
+
+  const handleNearMeClick = async () => {
+    if (coordinates?.latitude && coordinates.longitude) {
+      const { latitude, longitude } = coordinates; // Destructure latitude and longitude
+
+      try {
+        setIsLoading(true);
+
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Request-Id": "unique-request-id",
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const cityName =
+            data.address?.state_district?.split(" ")[0] || "Unknown City";
+          console.log("City Name:", cityName);
+
+          const searchParams = new URLSearchParams({
+            location: cityName || "",
+          });
+
+          router.push(`/search?${searchParams.toString()}`);
+        } else {
+          console.error("Failed to fetch city name:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error fetching city name:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      console.error("Coordinates are missing or invalid.");
+    }
   };
 
   return (
@@ -202,7 +244,8 @@ export function SearchForm() {
         className="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0 relative"
       >
         <div className="relative flex-1">
-          <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-black" />
+
           <Input
             placeholder="Enter a location"
             value={location}
@@ -259,8 +302,16 @@ export function SearchForm() {
           <Search className="mr-2 h-5 w-5" />
           Find Storage
         </Button>
-        <div id="map"></div>
       </form>
+      <div className="flex justify-end mt-2 mr-40 ">
+        <button
+          type="button"
+          onClick={handleNearMeClick}
+          className="text-sm text-white font-bold flex items-center gap-1 bg-transparent hover:bg-primary/90 px-4 py-2 rounded-2xl transition-colors duration-200"
+        >
+          Near me <Locate className="h-3 w-3" />
+        </button>
+      </div>
     </>
   );
 }
