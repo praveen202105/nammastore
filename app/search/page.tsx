@@ -86,7 +86,7 @@ function SearchContent() {
   useEffect(() => {
     // console.log("ccc", container);
 
-    if (!coordinates || !container) return;
+    // if (!coordinates || !container) return;
     import("@/sdk/OlaMapsWebSDKNew").then((module) => {
       const { OlaMaps } = module;
       // initialize and render map here
@@ -120,7 +120,7 @@ function SearchContent() {
           return [centerLng, centerLat];
         }
 
-        return [coordinates.longitude, coordinates.latitude]; // Fallback to a default center
+        return [coordinates?.longitude, coordinates?.latitude]; // Fallback to a default center
       };
 
       const calculatedCenter = calculateCenter();
