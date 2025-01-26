@@ -708,8 +708,8 @@ export default function BookingPage() {
   ]); // Include dependencies here
 
   useEffect(() => {
-    handleLocateMe();
-  }, []);
+    if (coordinates) handleLocateMe();
+  }, [coordinates]);
 
   useEffect(() => {
     const nextTime = getNextAvailableTime(availableSlots);
