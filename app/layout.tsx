@@ -38,7 +38,7 @@ export default function RootLayout({
             <main className="min-h-screen bg-gradient-to-b from-sky-100 to-white">
               {children}
             </main>
-            <Footer />
+            {/* <Footer /> */}
           </GoogleOAuthProvider>
         </UserProvider>
       </body>

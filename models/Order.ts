@@ -17,6 +17,14 @@ export interface IOrder extends Document {
   pickup: { date: Date; time: string }; // Date and time when the luggage will be picked up
   return: { date: Date; time: string }; // Date and time when the luggage will be returned
   verified: boolean; // Whether the order is verified or not
+  selectedPlan:string;
+  address:{
+    address:string;
+    coordinates:{
+      latitude: number;
+      longitude: number;
+    }
+  }
 
   // Payment Details
   paymentMethod: string;             // Payment method (e.g., 'credit card', 'paypal')
@@ -58,7 +66,7 @@ const OrderSchema: Schema = new Schema(
       time: { type: String, required: true }, // Return time
     },
     verified: { type: Boolean, default: false }, // Order verified status
-
+ 
 
     // Payment Details
     paymentMethod: { type: String, 
