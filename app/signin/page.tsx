@@ -152,8 +152,8 @@ function SignInForm() {
   };
 
   return (
-    <div className="container flex items-center justify-center min-h-screen">
-      <Card className="w-[50%] relative">
+    <div className="container flex items-center justify-center h-full mt-12">
+      <Card className="md:w-[50%] w-full">
         <CardHeader>
           <CardTitle>Sign In or Sign Up</CardTitle>
           <CardDescription>
@@ -195,7 +195,7 @@ function SignInForm() {
                     Signing in with with email
                   </Button>
                 ) : (
-                  <Button className="w-[30%] mt-6" type="submit">
+                  <Button className="md:w-[30%] w-full mt-6" type="submit">
                     Sign in with email
                   </Button>
                 )}
