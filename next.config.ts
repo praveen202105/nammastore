@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   images: {
-    domains: ['res.cloudinary.com'], // Add any external image domains here
+    domains: ['res.cloudinary.com',"images.unsplash.com"], // Add any external image domains here
   },
 };
 

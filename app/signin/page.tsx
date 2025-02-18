@@ -7,7 +7,6 @@ interface DecodedToken {
 }
 
 import { Suspense, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,7 +19,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Cookies from "js-cookie";
-// import { FcGoogle } from "react-icons/fc";
 import { X } from "lucide-react";
 
 import { useUser } from "@/store/userContext";
@@ -28,7 +26,7 @@ import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 import { useRouter } from "next/navigation";
-// import { useRouter } from "next/router";
+import { Button } from "@/components/ui/button";
 export default function SignInPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
@@ -47,40 +45,19 @@ function SignInForm() {
   const [signUpPassword, setSignUpPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const { setUser } = useUser();
-  // const { callback } = router.query;
-  // const searchParams = useSearchParams();
-  // const callback = new URLSearchParams(window.location.search).get("callback");
-  // const callback = searchParams?.get("callback") || "No location provided";
-  // console.log("callback  ", callback);
-
-  // console.log("ccc", callback);
-
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    // Handle email sign in
     console.log("Sign in with email:", email, "password:", password);
     try {
-      // Post user data to backend
       const { data } = await axios.post("/api/auth/signin", {
         email: email,
         password: password,
       });
-
-      // Assuming data contains the user object and token
       const { user, token } = data;
-      // console.log("dd", data);
-
-      // Set the user in context
-
-      // Set the token in a cookie with an expiration time
       Cookies.set("authToken", token, { expires: 30 }); // 30 days
-
-      // console.log("User successfully logged in:", user);
-
-      // Wait for 2 seconds before navigation
       setTimeout(() => {
         setUser(user);
 
@@ -130,9 +107,6 @@ function SignInForm() {
     }
   };
 
-  const handleClose = () => {
-    router.push("/");
-  };
 
   const handleGoogleLogin = async (response: CredentialResponse) => {
     setGoogleLoading(true);
@@ -156,20 +130,9 @@ function SignInForm() {
           picture: decoded.picture,
         };
 
-        // Post user data to backend
         const { data } = await axios.post("/api/auth/google", userProfile);
-
-        // Assuming data contains the user object and token
         const { user, token } = data;
-
-        // Set the user in context
-
-        // Set the token in a cookie with an expiration time
         Cookies.set("authToken", token, { expires: 30 }); // 30 days
-
-        // console.log("User successfully logged in:", user);
-
-        // Wait for 2 seconds before navigation
         setTimeout(() => {
           setUser(user);
 
@@ -177,9 +140,7 @@ function SignInForm() {
 
           setGoogleLoading(false);
         }, 2000);
-        // Proceed with your logic here, e.g., sending the credential to your backend
       } else {
-        // Handle the case when credential is undefined
         console.error("Google Login Failed: No credential found");
         setError("Google Sign-In Failed");
       }
@@ -192,24 +153,16 @@ function SignInForm() {
 
   return (
     <div className="container flex items-center justify-center min-h-screen">
-      <Card className="w-[400px] relative">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-2 top-2"
-          onClick={handleClose}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+      <Card className="w-[50%] relative">
         <CardHeader>
           <CardTitle>Sign In or Sign Up</CardTitle>
           <CardDescription>
             Create an account or sign in to continue
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="w-full">
           <Tabs defaultValue="email">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid grid-cols-2">
               <TabsTrigger value="email">Sign In</TabsTrigger>
               <TabsTrigger value="mobile">Sign Up</TabsTrigger>
             </TabsList>
@@ -242,7 +195,7 @@ function SignInForm() {
                     Signing in with with email
                   </Button>
                 ) : (
-                  <Button className="w-full mt-6" type="submit">
+                  <Button className="w-[30%] mt-6" type="submit">
                     Sign in with email
                   </Button>
                 )}
@@ -301,18 +254,9 @@ function SignInForm() {
               </span>
             </div>
           </div>
-          {/* <Button
-            variant="outline"
-            className="w-full mt-6"
-            onClick={() => login()}
-          >
-            <FcGoogle className="mr-2 h-4 w-4" />
-            Google
-          </Button> */}
-          <div className="mt-6">
+          <div className="mt-6 w-full">
             {googleLoading ? (
               <Button disabled variant="outline" className="w-full">
-                {/* <Loader2 className="w-full animate-spin" /> */}
                 Signing in with Google...
               </Button>
             ) : (
@@ -320,7 +264,9 @@ function SignInForm() {
                 onSuccess={handleGoogleLogin}
                 onError={() => setError("Google Sign-In Failed")}
                 size="large"
-                width="350"
+                width="50"
+                shape="circle"
+                logo_alignment="left"
               />
             )}
             {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
