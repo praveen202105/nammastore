@@ -711,7 +711,7 @@ export default function BookingPage() {
 
   useEffect(() => {
     if (coordinates) handleLocateMe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coordinates]);
 
   useEffect(() => {

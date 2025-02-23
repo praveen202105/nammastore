@@ -7,6 +7,7 @@ import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { NavBar } from "@/components/ui/tubelight-navbar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Toaster } from "@/components/ui/sonner";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -32,11 +33,12 @@ export default function RootLayout({
         <UserProvider>
           <GoogleOAuthProvider clientId={process.env.GOOGLE_CLIENT_ID || ""}>
             <NavBar />
-           
+
             <div className=" h-[calc(100vh-50px)]">
               <ScrollArea className="h-full w-full">
-                <div className="pl-4 pr-[4px] pt-10 sm:px-6 md:px-8">
+                <div className="pl-4 pr-[4px] pt-14 sm:px-6 md:px-8">
                   {children}
+                  <Toaster />
                 </div>
               </ScrollArea>
             </div>
