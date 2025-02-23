@@ -1,4 +1,5 @@
-"use client"
+"use client";
+import EnquiryForm from "@/components/enquire-form";
 import { SearchForm } from "@/components/search-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -96,27 +97,25 @@ export default function Home() {
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
               {cities.map((city) => (
-                  <Card
-                    key={city.name}
-                    className="hover:shadow-lg transition-shadow cursor-pointer"
-                    onClick={() =>
-                      router.push(`/search?location=${city.name}`)
-                    }
-                  >
-                    <CardContent className="p-3">
-                      <div className="relative h-40 mb-4 rounded-lg overflow-hidden">
-                        <Image
-                          src={city.image || "/placeholder.svg"}
-                          alt={city.landmark}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <h3 className="text-center font-semibold text-lg">
-                        {city.name}
-                      </h3>
-                    </CardContent>
-                  </Card>
+                <Card
+                  key={city.name}
+                  className="hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => router.push(`/search?location=${city.name}`)}
+                >
+                  <CardContent className="p-3">
+                    <div className="relative h-40 mb-4 rounded-lg overflow-hidden">
+                      <Image
+                        src={city.image || "/placeholder.svg"}
+                        alt={city.landmark}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <h3 className="text-center font-semibold text-lg">
+                      {city.name}
+                    </h3>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>
@@ -246,23 +245,7 @@ export default function Home() {
               </div>
 
               {/* Enquiry Form */}
-              <div className="space-y-8">
-                <h3 className="text-2xl font-bold">ENQUIRE NOW</h3>
-                <form className="space-y-6">
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <Input placeholder="Your name" />
-                    <Input type="email" placeholder="Your email" />
-                  </div>
-                  <Input type="tel" placeholder="Your mobile number" />
-                  <Textarea
-                    placeholder="Your Message"
-                    className="min-h-[150px]"
-                  />
-                  <Button className="w-full md:w-auto px-8 bg-[#1a237e] hover:bg-[#1a237e]/90">
-                    SEND YOUR MESSAGE
-                  </Button>
-                </form>
-              </div>
+              <EnquiryForm />
             </div>
           </div>
         </section>

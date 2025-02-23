@@ -88,6 +88,7 @@ export function SearchForm() {
   };
 
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("callledd ");
     setLocation(e.target.value);
     setError("");
     if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
@@ -111,6 +112,8 @@ export function SearchForm() {
   }, []);
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
+    console.log("lkjhg");
+
     setLocation(suggestion.title);
     setSelectedLocation(suggestion);
     setShowSuggestions(false);
@@ -149,49 +152,77 @@ export function SearchForm() {
       }
     }
   };
+  const inputRef = useRef(null);
+  const placeholders = [
+    "What's the first rule of Fight Club?",
+    "Who is Tyler Durden?",
+    "Where is Andrew Laeddis Hiding?",
+    "Write a Javascript method to reverse a string",
+    "How to assemble your own PC?",
+  ];
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log(e.target.value);
+  };
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    console.log("submitted");
+  };
   return (
     <>
       <form
         onSubmit={handleSearch}
-        className="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0 relative"
+        className="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0 relative w-full z-100"
       >
-        <div className="relative flex-1">
-          <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#1a237e]" />
+        <div
+          className="relative flex-1 w-full z-100"
+          // onClick={() => inputRef.current?.focus()}
+        >
+          <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#1a237e] pointer-events-none" />
           <Input
+            ref={inputRef}
             placeholder="Search a location"
             value={location}
             onChange={handleLocationChange}
             onFocus={() => setShowSuggestions(true)}
-            className="pl-12 h-12  bg-white shadow-md rounded-lg text-gray-800 placeholder-gray-500"
+            className="pl-12 h-12 w-full bg-white shadow-md rounded-lg text-gray-800 placeholder-gray-500 z-100"
           />
+
+          {location && (
+            <button
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              onClick={() => setLocation("")} // Clear location
+            >
+              ✖
+            </button>
+          )}
 
           {showSuggestions && suggestions.length > 0 && (
             <Card
+              className="absolute  w-full mt-1 shadow-lg z-100"
               ref={suggestionRef}
-              className="absolute z-10 w-full mt-1 shadow-lg rounded-md border border-gray-200 bg-white"
             >
               <ScrollArea className="h-64">
                 {suggestions.map((suggestion, index) => (
-                  <div key={index}>
-                    <div
-                      className="p-4 flex justify-between hover:bg-gray-100 cursor-pointer transition-all duration-150"
-                      onClick={() => handleSuggestionClick(suggestion)}
-                    >
-                      <div>
-                        <p className="font-semibold">{suggestion.title}</p>
-                        <p className="text-sm text-gray-600">
-                          {suggestion.address}
+                  <div
+                    key={index}
+                    className="p-3 hover:bg-gray-100 cursor-pointer transition-colors duration-200 flex w-full"
+                    onClick={() => handleSuggestionClick(suggestion)}
+                  >
+                    <div className="flex justify-between items-start w-full">
+                      <div className="flex-grow text-left">
+                        {" "}
+                        <p className="font-semibold text-gray-800">
+                          {suggestion.title}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {suggestion.address.slice(0, 60)}
                         </p>
                       </div>
-                      <span className="text-xs bg-[#1a237e] text-white px-2 py-1 rounded-md h-10 w-10">
+                      <span className="text-xs font-bold text-[#1a237e]  px-2 py-1 rounded-md ml-2 h-10 ">
                         {suggestion.distance} km
                       </span>
                     </div>
-
-                    {index < suggestions.length - 1 && (
-                      <Separator className="my-2 bg-gray-200" />
-                    )}
                   </div>
                 ))}
               </ScrollArea>
