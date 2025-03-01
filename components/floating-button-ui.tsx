@@ -7,7 +7,7 @@ import { IconBrandWhatsapp } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 
 function FloatingButtonExample() {
-  const phoneNumber = "7705858116"; // Replace with Namma Store's WhatsApp number
+  const phoneNumber = "9365346556"; // Replace with Namma Store's WhatsApp number
   const message = encodeURIComponent(
     "Hello, I am interested in enquiring about Namma Store. Can you provide more details?"
   );
