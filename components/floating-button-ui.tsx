@@ -2,59 +2,35 @@ import {
   FloatingButton,
   FloatingButtonItem,
 } from "@/components/ui/floating-button";
-import { cn } from "@/lib/utils";
-import { IconBrandFacebook, IconBrandLinkedinFilled, IconBrandWhatsapp } from "@tabler/icons-react";
+
+import { IconBrandWhatsapp } from "@tabler/icons-react";
 import { motion } from "framer-motion";
-import {
-  Contact2,
-  DribbbleIcon,
-  FacebookIcon,
-  LinkedinIcon,
-  PlusIcon,
-} from "lucide-react";
 
 function FloatingButtonExample() {
-  const items = [
-    {
-      icon: <IconBrandFacebook />,
-      bgColor: "bg-[#1877f2]",
-    },
-    {
-      icon: <IconBrandWhatsapp />,
-      bgColor: "bg-[#25D366]",
-    },
-    {
-      icon: <IconBrandLinkedinFilled />,
-      bgColor: "bg-[#0a66c2]",
-    },
-  ];
+  const phoneNumber = "7705858116"; // Replace with Namma Store's WhatsApp number
+  const message = encodeURIComponent(
+    "Hello, I am interested in enquiring about Namma Store. Can you provide more details?"
+  );
+
+  const openWhatsApp = () => {
+    window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
+  };
 
   return (
     <FloatingButton
       triggerContent={
         <motion.button
-          className="flex items-center justify-center h-12 w-12 rounded-full bg-black dark:bg-slate-800 text-white/80"
-          whileHover={{ scale: 1.1 }} // Slightly increases size on hover
-          whileTap={{ scale: 0.9 }} // Slightly shrinks on tap/click
-          transition={{ type: "spring", stiffness: 300, damping: 10 }} // Smooth spring animation
+          className="flex items-center justify-center h-12 w-12 rounded-full bg-[#25D366] text-white shadow-lg"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          transition={{ type: "spring", stiffness: 300, damping: 10 }}
+          onClick={openWhatsApp} // Opens WhatsApp on click
         >
-          <Contact2 />
+          <IconBrandWhatsapp size={28} />
         </motion.button>
       }
-    >
-      {items.map((item, key) => (
-        <FloatingButtonItem key={key}>
-          <button
-            className={cn(
-              "h-12 w-12 rounded-full flex items-center justify-center text-white/80",
-              item.bgColor
-            )}
-          >
-            {item.icon}
-          </button>
-        </FloatingButtonItem>
-      ))}
-    </FloatingButton>
+      children={undefined}
+    />
   );
 }
 
