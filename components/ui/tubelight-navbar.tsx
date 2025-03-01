@@ -62,8 +62,9 @@ export function NavBar() {
         setItems(newItems);
       }
     }
-    {
+    else{
       setIsLoggedIn(false);
+      setItems(defaultNavItems);
     }
   }, [user]);
 
