@@ -1,40 +1,41 @@
-"use client";
+"use client"
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { MapPin, Search, Loader2, Locate } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "./ui/separator";
+import type React from "react"
+
+import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { MapPin, Search, Loader2, Locate } from "lucide-react"
+import { Card } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface Suggestion {
-  title: string;
-  address: string;
-  distance: string;
+  title: string
+  address: string
+  distance: string
   location: {
-    lat: number;
-    lon: number;
-  };
-  city: string;
+    lat: number
+    lon: number
+  }
+  city: string
 }
 
 export function SearchForm() {
-  const apiKey = process.env.NEXT_PUBLIC_MAP_KEY || "";
-  const router = useRouter();
+  const apiKey = process.env.NEXT_PUBLIC_MAP_KEY || ""
+  const router = useRouter()
   const [coordinates, setCoordinates] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const [location, setLocation] = useState("");
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<Suggestion>();
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const suggestionRef = useRef<HTMLDivElement>(null);
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    latitude: number
+    longitude: number
+  } | null>(null)
+  const [location, setLocation] = useState("")
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [selectedLocation, setSelectedLocation] = useState<Suggestion>()
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const suggestionRef = useRef<HTMLDivElement>(null)
+  const [error, setError] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -43,141 +44,111 @@ export function SearchForm() {
           latitude: coords.latitude,
           longitude: coords.longitude,
         }),
-      () => setError("Failed to get geolocation.")
-    );
-  }, []);
+      () => setError("Failed to get geolocation."),
+    )
+  }, [])
 
   const fetchSuggestions = async (input: string) => {
     if (!input) {
-      setSuggestions([]);
-      return;
+      setSuggestions([])
+      return
     }
-    setIsLoading(true);
+    setIsLoading(true)
 
     try {
       if (coordinates) {
-        const { latitude, longitude } = coordinates;
+        const { latitude, longitude } = coordinates
         const response = await fetch(
           `https://api.olamaps.io/places/v1/autocomplete?location=${latitude},${longitude}&input=${encodeURIComponent(
-            input
-          )}&api_key=${apiKey}`
-        );
-        if (!response.ok)
-          throw new Error("Failed to fetch location suggestions");
+            input,
+          )}&api_key=${apiKey}`,
+        )
+        if (!response.ok) throw new Error("Failed to fetch location suggestions")
 
-        const data = await response.json();
+        const data = await response.json()
         setSuggestions(
           data.predictions.map((prediction: any) => ({
             title: prediction.structured_formatting.main_text,
             address: prediction.structured_formatting.secondary_text,
             distance: (prediction.distance_meters / 1000).toFixed(2),
             location: prediction.geometry.location,
-            city:
-              prediction.terms[prediction.terms.length - 4]?.value.split(
-                " "
-              )[0] || "",
-          }))
-        );
-        setShowSuggestions(true);
+            city: prediction.terms[prediction.terms.length - 4]?.value.split(" ")[0] || "",
+          })),
+        )
+        setShowSuggestions(true)
       }
     } catch {
-      setError("Unable to fetch suggestions. Please try again.");
+      setError("Unable to fetch suggestions. Please try again.")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("callledd ");
-    setLocation(e.target.value);
-    setError("");
-    if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
-    debounceTimeoutRef.current = setTimeout(
-      () => fetchSuggestions(e.target.value),
-      300
-    );
-  };
+    setLocation(e.target.value)
+    setError("")
+    if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current)
+    debounceTimeoutRef.current = setTimeout(() => fetchSuggestions(e.target.value), 300)
+  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        suggestionRef.current &&
-        !suggestionRef.current.contains(event.target as Node)
-      ) {
-        setShowSuggestions(false);
+      if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false)
       }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
-    console.log("lkjhg");
-
-    setLocation(suggestion.title);
-    setSelectedLocation(suggestion);
-    setShowSuggestions(false);
-    setSuggestions([]);
-    setError("");
-  };
+    setLocation(suggestion.title)
+    setSelectedLocation(suggestion)
+    setShowSuggestions(false)
+    setSuggestions([])
+    setError("")
+  }
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (!location) {
-      setError("Please select a location from the suggestions.");
-      setTimeout(() => setError(""), 2000);
-      return;
+      setError("Please select a location from the suggestions.")
+      setTimeout(() => setError(""), 2000)
+      return
     }
-    router.push(`/search?location=${selectedLocation?.city || ""}`);
-  };
+    router.push(`/search?location=${selectedLocation?.city || ""}`)
+  }
 
   const handleNearMeClick = async () => {
     if (coordinates) {
-      const { latitude, longitude } = coordinates;
+      const { latitude, longitude } = coordinates
       try {
-        setIsLoading(true);
+        setIsLoading(true)
         const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-        );
-        if (!response.ok) throw new Error("Failed to fetch city name");
+          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+        )
+        if (!response.ok) throw new Error("Failed to fetch city name")
 
-        const data = await response.json();
-        const cityName =
-          data.address?.state_district?.split(" ")[0] || "Unknown City";
-        router.push(`/search?location=${cityName}`);
+        const data = await response.json()
+        const cityName = data.address?.state_district?.split(" ")[0] || "Unknown City"
+        router.push(`/search?location=${cityName}`)
       } catch {
-        setError("Error fetching location.");
+        setError("Error fetching location.")
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
     }
-  };
-  const inputRef = useRef(null);
-  const placeholders = [
-    "What's the first rule of Fight Club?",
-    "Who is Tyler Durden?",
-    "Where is Andrew Laeddis Hiding?",
-    "Write a Javascript method to reverse a string",
-    "How to assemble your own PC?",
-  ];
+  }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log(e.target.value);
-  };
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log("submitted");
-  };
+  const inputRef = useRef(null)
+
   return (
-    <>
+    <div className="w-full max-w-4xl mx-auto bg-white/10 backdrop-blur-sm p-6 rounded-lg">
       <form
         onSubmit={handleSearch}
-        className="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0 relative w-full z-100"
+        className="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0 relative w-full z-10"
       >
-        <div
-          className="relative flex-1 w-full z-100"
-          // onClick={() => inputRef.current?.focus()}
-        >
+        <div className="relative flex-1 w-full z-20">
           <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#1a237e] pointer-events-none" />
           <Input
             ref={inputRef}
@@ -185,23 +156,21 @@ export function SearchForm() {
             value={location}
             onChange={handleLocationChange}
             onFocus={() => setShowSuggestions(true)}
-            className="pl-12 h-12 w-full bg-white shadow-md rounded-lg text-gray-800 placeholder-gray-500 z-100"
+            className="pl-12 h-12 w-full bg-white shadow-md rounded-lg text-gray-800 placeholder-gray-500"
           />
 
           {location && (
             <button
+              type="button"
               className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              onClick={() => setLocation("")} // Clear location
+              onClick={() => setLocation("")}
             >
               ✖
             </button>
           )}
 
           {showSuggestions && suggestions.length > 0 && (
-            <Card
-              className="absolute  w-full mt-1 shadow-lg z-100"
-              ref={suggestionRef}
-            >
+            <Card className="absolute w-full mt-1 shadow-lg z-30" ref={suggestionRef}>
               <ScrollArea className="h-64">
                 {suggestions.map((suggestion, index) => (
                   <div
@@ -211,15 +180,10 @@ export function SearchForm() {
                   >
                     <div className="flex justify-between items-start w-full">
                       <div className="flex-grow text-left">
-                        {" "}
-                        <p className="font-semibold text-gray-800">
-                          {suggestion.title}
-                        </p>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {suggestion.address.slice(0, 60)}
-                        </p>
+                        <p className="font-semibold text-gray-800">{suggestion.title}</p>
+                        <p className="text-sm text-gray-600 mt-1">{suggestion.address.slice(0, 60)}</p>
                       </div>
-                      <span className="text-xs font-bold text-[#1a237e]  px-2 py-1 rounded-md ml-2 h-10 ">
+                      <span className="text-xs font-bold text-[#1a237e] px-2 py-1 rounded-md ml-2 h-10">
                         {suggestion.distance} km
                       </span>
                     </div>
@@ -230,32 +194,28 @@ export function SearchForm() {
           )}
         </div>
 
-        <Button
-          type="submit"
-          className="w-full md:w-auto h-12 bg-[#1a237e] shadow-lg transition"
-        >
+        <Button type="submit" className="w-full md:w-auto h-12 bg-[#1a237e] shadow-lg transition">
           <Search className="mr-2 h-5 w-5" />
           Find Storage
         </Button>
       </form>
 
-      <div className="flex justify-between mt-2">
+      <div className="flex justify-between mt-2 text-white">
         <div className="py-2">
-          {isLoading && (
-            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-          )}
-          {error && <p className="mt-2 text-bold text-red-500">{error}</p>}
+          {isLoading && <Loader2 className="h-5 w-5 animate-spin text-white" />}
+          {error && <p className="mt-2 text-bold text-red-300">{error}</p>}
         </div>
         <div>
           <button
             type="button"
             onClick={handleNearMeClick}
-            className="text-sm font-semibold flex items-center gap-1 px-4 py-2 rounded-full border border-gray-300 shadow-sm hover:bg-gray-200 transition"
+            className="text-sm font-semibold flex items-center gap-1 px-4 py-2 rounded-full border border-white/30 bg-white/20 hover:bg-white/30 transition text-white"
           >
-            Near me <Locate className="h-4 w-4 text-[#1a237e]" />
+            Near me <Locate className="h-4 w-4 text-white" />
           </button>
         </div>
       </div>
-    </>
-  );
+    </div>
+  )
 }
+

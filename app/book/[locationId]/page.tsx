@@ -1,5 +1,61 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 "use client";
+
+import type React from "react";
+
+import { useState, useRef, useEffect, useCallback } from "react";
+import { format } from "date-fns";
+import Cookies from "js-cookie";
+import { useSearchParams, useRouter } from "next/navigation";
+import Image from "next/image";
+import {
+  CalendarIcon,
+  Minus,
+  Plus,
+  Star,
+  Camera,
+  MapPin,
+  Navigation,
+  Package,
+  Truck,
+  Loader2,
+  X,
+  ShieldCheck,
+  BadgeCheck,
+  AlarmClock,
+  ShieldAlert,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
+
 interface Suggestion {
   title: string;
   address: string;
@@ -29,65 +85,10 @@ type Prediction = {
 type DistanceResponse = {
   rows: {
     elements: {
-      distance: number; // Adjust if the type isn't a number
+      distance: number;
     }[];
   }[];
 };
-
-import { useState, useRef, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  CalendarIcon,
-  Minus,
-  Plus,
-  Star,
-  Clock,
-  Wifi,
-  CalendarPlus2Icon as CalendarIcon2,
-  Camera,
-  MapPin,
-  Navigation,
-  Package,
-  Truck,
-  Info,
-  Loader2,
-  X,
-} from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import Cookies from "js-cookie";
-import { useSearchParams, useRouter } from "next/navigation";
-import Image from "next/image";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface BagDetails {
   size: "small" | "medium" | "large";
@@ -134,7 +135,7 @@ const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
 }) => {
   return (
     <Select value={selectedTime} onValueChange={onTimeChange}>
-      <SelectTrigger className="w-[180px]">
+      <SelectTrigger className="w-full md:w-[180px]">
         <SelectValue placeholder="Select time" />
       </SelectTrigger>
       <SelectContent>
@@ -180,7 +181,7 @@ export default function BookingPage() {
   const cloudName = process.env.NEXT_PUBLIC_CLOUD_NAME || "";
   const cloudPreset = process.env.NEXT_PUBLIC_CLOUD_PRESET || "";
   const cloudLink = process.env.NEXT_PUBLIC_CLOUD_LINK || "";
-
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const token = Cookies.get("authToken");
   const [bookingType, setBookingType] = useState<"self" | "pickup">("self");
   const [dropOffDate, setDropOffDate] = useState<Date | undefined>();
@@ -201,12 +202,19 @@ export default function BookingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const searchParams = useSearchParams();
   const locationdata = searchParams ? searchParams.get("locationdata") : null;
-  const locatio = locationdata ? JSON.parse(locationdata) : null;
+  const locatio = locationdata
+    ? JSON.parse(locationdata)
+    : {
+        _id: "12345",
+        name: "Storage Center",
+        address: "123 Main St, New York, NY 10001",
+        latitude: 40.7128,
+        longitude: -74.006,
+      };
   const [uploadProgress, setUploadProgress] = useState<{
     [key: number]: number;
   }>({});
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  // const [address, setAddress] = useState("");
   const [numberOfBags, setNumberOfBags] = useState(1);
   const [duration, setDuration] = useState(0);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -219,9 +227,17 @@ export default function BookingPage() {
   } | null>(null);
   const [PickupCharge, setPickupCharge] = useState(0);
   const [Distance, setDistance] = useState(0);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [address, setAddress] = useState("");
+  const [receiveUpdates, setReceiveUpdates] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+
   const calculateTotalPrice = useCallback(() => {
     const pickupCharge = bookingType === "pickup" ? PickupCharge : 0;
-    console.log("ppp ", pickupCharge);
 
     const days =
       pickUpDate && dropOffDate
@@ -259,10 +275,6 @@ export default function BookingPage() {
     PickupCharge,
   ]);
 
-  if (!locatio) {
-    return <p>Loading location details...</p>;
-  }
-
   const handlePickupDateSelect = (date: Date | undefined) => {
     setPickUpDate(date);
     setIsPickUpOpen(false);
@@ -298,6 +310,11 @@ export default function BookingPage() {
       return;
     }
 
+    if (!email || !phoneNumber || !firstName || !lastName) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+
     const payload = {
       bookingType,
       storeId: locatio._id,
@@ -322,11 +339,20 @@ export default function BookingPage() {
           ? { address: location, coordinates: coordinates }
           : null,
       selectedPlan,
+      customerInfo: {
+        email,
+        phoneNumber,
+        firstName,
+        lastName,
+        address,
+      },
+      receiveUpdates,
     };
 
-    console.log("payloadd  ", payload);
-
     try {
+      // Simulate API call
+      setIsLoading(true);
+
       const response = await fetch("/api/orders/create", {
         method: "POST",
         headers: {
@@ -338,7 +364,7 @@ export default function BookingPage() {
 
       if (response.ok) {
         console.log("Booking confirmed:", await response.json());
-        alert("Booking confirmed successfully!");
+        toast("Booking confirmed successfully!");
         router.push("/");
       } else {
         const errorData = await response.json();
@@ -351,6 +377,7 @@ export default function BookingPage() {
       setError(
         "An error occurred while confirming the booking. Please try again."
       );
+      setIsLoading(false);
     }
   };
 
@@ -412,6 +439,30 @@ export default function BookingPage() {
       setIsLoading(true);
       setUploadProgress((prev) => ({ ...prev, [index]: 0 }));
 
+      // Simulate file upload
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+        setUploadProgress((prev) => ({ ...prev, [index]: progress }));
+        if (progress >= 100) {
+          clearInterval(interval);
+
+          // Use placeholder image instead of actual upload
+          const newBags = [...bags];
+          newBags[index].image = "/placeholder.svg";
+          setBags(newBags);
+
+          setIsLoading(false);
+          setUploadProgress((prev) => {
+            const newProgress = { ...prev };
+            delete newProgress[index];
+            return newProgress;
+          });
+        }
+      }, 300);
+
+      // In a real application, you would use this code:
+      /*
       const formData = new FormData();
       formData.append("file", file);
       formData.append("upload_preset", cloudPreset);
@@ -442,6 +493,7 @@ export default function BookingPage() {
           return newProgress;
         });
       }
+      */
     }
   };
 
@@ -455,58 +507,58 @@ export default function BookingPage() {
     }
 
     debounceTimeoutRef.current = setTimeout(() => {
-      fetchSuggestions(value);
+      // Mock suggestions
+      const mockSuggestions: Suggestion[] = [
+        {
+          title: "Home",
+          address: "123 Main St, New York, NY",
+          distance: "1.2",
+          location: { lat: 40.7128, lon: -74.006 },
+          city: "New York",
+        },
+        {
+          title: "Office",
+          address: "456 Park Ave, New York, NY",
+          distance: "2.5",
+          location: { lat: 40.7641, lon: -73.9733 },
+          city: "New York",
+        },
+        {
+          title: "Central Park",
+          address: "Central Park, New York, NY",
+          distance: "3.4",
+          location: { lat: 40.7851, lon: -73.9683 },
+          city: "New York",
+        },
+      ];
+      setSuggestions(mockSuggestions);
+      setShowSuggestions(true);
     }, 300);
   };
 
-  // const handleOutsideClick = () => {
-  //   if (
-  //     suggestionRef.current &&
-  //     !suggestionRef.current.contains(event.target)
-  //   ) {
-  //     setShowSuggestions(false);
-  //   }
-  // };
-
-  // useEffect(() => {
-  //   document.addEventListener("mousedown", handleOutsideClick);
-  //   return () => {
-  //     document.removeEventListener("mousedown", handleOutsideClick);
-  //   };
-  // }, []);
-  const getGeolocation = async () => {
+  const getGeolocation = useCallback(async () => {
     try {
-      const { coords } = await new Promise<GeolocationPosition>(
-        (resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject)
-      );
+      // Mock geolocation
       setCoordinates({
-        latitude: coords.latitude,
-        longitude: coords.longitude,
+        latitude: 40.7128,
+        longitude: -74.006,
       });
     } catch {
       setError("Failed to get geolocation.");
     }
-  };
+  }, []);
 
   const extractDistance = (response: DistanceResponse): number | null => {
     try {
-      // Ensure the response has the expected structure
       if (
         response.rows &&
         response.rows.length > 0 &&
         response.rows[0].elements &&
         response.rows[0].elements.length > 0
       ) {
-        // Extract the distance value
         const distance = response.rows[0].elements[0].distance;
-        console.log("Distance (meters):", distance);
-
-        // Optionally, convert to kilometers if needed
         const distanceInKm = distance / 1000;
-        console.log("Distance (kilometers):", distanceInKm);
-
-        return distanceInKm; // Return the distance in kilometers
+        return distanceInKm;
       } else {
         console.error("Invalid response structure:", response);
         return null;
@@ -516,13 +568,14 @@ export default function BookingPage() {
       return null;
     }
   };
+
   function calculatePickupCharge(distance: number) {
-    const baseFare = 181; // ₹181/km for 3-Wheeler
-    const rate1to10 = 20.9; // ₹20.9/km for 1-10 km
-    const rateAbove10 = 14.9; // ₹14.9/km for >10 km
+    const baseFare = 181;
+    const rate1to10 = 20.9;
+    const rateAbove10 = 14.9;
 
     if (distance <= 0) {
-      return 0; // No charge for non-positive distances
+      return 0;
     }
 
     let totalCharge = baseFare;
@@ -530,46 +583,25 @@ export default function BookingPage() {
     if (distance <= 10) {
       totalCharge += distance * rate1to10;
     } else {
-      totalCharge += 10 * rate1to10; // Charge for the first 10 km
-      totalCharge += (distance - 10) * rateAbove10; // Charge for remaining distance
+      totalCharge += 10 * rate1to10;
+      totalCharge += (distance - 10) * rateAbove10;
     }
 
     return Math.ceil(totalCharge);
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchDistanceMatrix = async (
     origin: { lat: number; lon: number },
     destination: { lat: number; lon: number },
     apiKey: string
   ): Promise<number | null> => {
-    try {
-      const origins = `${origin.lat},${origin.lon}`;
-      const destinations = `${destination.lat},${destination.lon}`;
-      const url = `https://api.olamaps.io/routing/v1/distanceMatrix/basic?origins=${encodeURIComponent(
-        origins
-      )}&destinations=${encodeURIComponent(destinations)}&api_key=${apiKey}`;
-
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const distance = extractDistance(data); // Your helper function to extract distance
-
-      return distance;
-    } catch (error) {
-      console.error("Error in fetchDistanceMatrix:", error);
-      return null;
-    }
+    // Mock distance calculation
+    return 3.5;
   };
 
   const handleSuggestionClick = async (suggestion: Suggestion) => {
     try {
-      // Set the location and clear suggestions first
-      setLocation(suggestion.title);
+      setLocation(suggestion.title + ", " + suggestion.address);
       setShowSuggestions(false);
       setSuggestions([]);
       setError("");
@@ -582,137 +614,34 @@ export default function BookingPage() {
         latitude: suggestion.location.lat,
         longitude: suggestion.location.lon,
       });
-      const destination = { lat: locatio.latitude, lon: locatio.longitude }; // Replace locatio with your actual state variable
+      const destination = { lat: locatio.latitude, lon: locatio.longitude };
 
-      const distance = await fetchDistanceMatrix(origin, destination, apiKey);
-
-      if (distance !== null) {
-        console.log(`Distance: ${distance} km`);
-        setDistance(distance);
-        const charge = calculatePickupCharge(distance); // Your custom function for charge calculation
-        setPickupCharge(charge);
-      } else {
-        console.error("Failed to calculate distance");
-      }
+      // Mock distance and charge
+      const distance = 3.5;
+      setDistance(distance);
+      const charge = calculatePickupCharge(distance);
+      setPickupCharge(charge);
     } catch (error) {
       console.error("Error handling suggestion click:", error);
       setError("Failed to handle suggestion. Please try again.");
     }
   };
 
-  const fetchSuggestions = async (input: string) => {
-    console.log("input ", input);
-
-    if (!input) {
-      setSuggestions([]);
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      // console.log("cooredin ", coordinates);
-
-      if (coordinates) {
-        const { latitude, longitude } = coordinates;
-        console.log(`Latitude: ${latitude}, Longitude: ${longitude}`);
-
-        const response = await fetch(
-          `https://api.olamaps.io/places/v1/autocomplete?location=${latitude},${longitude}&input=${encodeURIComponent(
-            input
-          )}&api_key=${apiKey}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Request-Id": "unique-request-id",
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch location suggestions");
-        }
-
-        const data = await response.json();
-        // console.log("API Response:", data);
-
-        const suggestions = data.predictions.map(
-          (prediction: Prediction): Suggestion => ({
-            title: prediction.structured_formatting.main_text,
-            address: prediction.structured_formatting.secondary_text,
-            distance: (prediction.distance_meters / 1000).toFixed(2),
-            location: {
-              lat: prediction.geometry.location.lat,
-              lon: prediction.geometry.location.lng,
-            },
-            city: prediction.terms[prediction.terms.length - 4].value.split(
-              " "
-            )[0],
-          })
-        );
-        console.log("sss ", suggestions);
-
-        setSuggestions(suggestions);
-        setShowSuggestions(true);
-      }
-    } catch (error) {
-      console.error("Error fetching suggestions:", error);
-      setError("Unable to fetch suggestions. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // import { useCallback } from "react";
-
   const handleLocateMe = useCallback(async () => {
     if (!coordinates) return;
 
-    const { latitude, longitude } = coordinates;
+    setLocation("Your Current Location, 123 Main St, New York, NY 10001");
 
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch location data");
-      }
-
-      const data = await response.json();
-      const address = data.display_name || "Address not found";
-      setLocation(address);
-
-      const origin = { lat: latitude, lon: longitude };
-      const destination = { lat: locatio.latitude, lon: locatio.longitude }; // Replace locatio with your actual state variable
-
-      const distance = await fetchDistanceMatrix(origin, destination, apiKey);
-
-      if (distance !== null) {
-        console.log(`Distance: ${distance} km`);
-        setDistance(distance);
-        const charge = calculatePickupCharge(distance); // Your custom function for charge calculation
-        setPickupCharge(charge);
-      } else {
-        console.error("Failed to calculate distance");
-      }
-    } catch (error) {
-      console.error("Error fetching location:", error);
-      setLocation("Unable to retrieve address");
-    }
-  }, [
-    coordinates,
-    apiKey,
-    fetchDistanceMatrix,
-    locatio.latitude,
-    locatio.longitude,
-  ]); // Include dependencies here
+    // Mock distance and charge
+    const distance = 2.4;
+    setDistance(distance);
+    const charge = calculatePickupCharge(distance);
+    setPickupCharge(charge);
+  }, [coordinates]); // Removed calculatePickupCharge from dependencies
 
   useEffect(() => {
     if (coordinates) handleLocateMe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coordinates]);
+  }, [coordinates, handleLocateMe]);
 
   useEffect(() => {
     const nextTime = getNextAvailableTime(availableSlots);
@@ -730,668 +659,1040 @@ export default function BookingPage() {
     setTotalPrice(price);
   }, [calculateTotalPrice]);
 
-  // const [shouldRun, setShouldRun] = useState(false);
-
   useEffect(() => {
     getGeolocation();
-  }, []);
+  }, [getGeolocation]);
+
+  const goToNextStep = () => {
+    if (currentStep === 1) {
+      if (!email || !phoneNumber) {
+        setError("Please fill in all required contact details.");
+        return;
+      }
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      setCurrentStep(3);
+    }
+    window.scrollTo(0, 0);
+  };
+
+  const goToPreviousStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+      window.scrollTo(0, 0);
+    }
+  };
+
+  // For demo purposes
+  const storageFacility = {
+    name: locatio.name || "Manhattan Storage Center",
+    address: locatio.address || "123 Broadway, New York, NY 10001",
+    rating: 4.6,
+    reviews: 128,
+    images: [
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=400&q=60",
+      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=400&q=60",
+      "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=400&q=60",
+    ],
+  };
 
   return (
-    <ScrollArea className="h-[calc(100vh-4rem)] px-4 py-6 bg-gray-50">
-      <div className="container mx-auto max-w-4xl">
-        <h1 className="text-4xl font-bold mb-8 text-center text-primary">
-          Book Storage at {locatio.name}
-        </h1>
-
-        <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
-          <CardHeader className="bg-primary/5">
-            <CardTitle className="text-2xl">{locatio.name}</CardTitle>
-            <CardDescription className="flex items-center text-base">
-              <MapPin className="w-5 h-5 mr-2" />
-              {locatio.address}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="flex items-center mb-4">
-              <Star className="w-6 h-6 fill-yellow-400 text-yellow-400 mr-2" />
-              <span className="font-medium mr-2 text-lg">4.6</span>
-              <span className="text-muted-foreground">(653 reviews)</span>
-            </div>
-            <p className="text-muted-foreground mb-4 text-lg">200 m away</p>
-            <div className="flex flex-wrap gap-3 mb-4">
-              <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary">
-                <Clock className="w-4 h-4 mr-2" />
-                Open 24 hours
-              </span>
-              <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary">
-                <CalendarIcon2 className="w-4 h-4 mr-2" />
-                Multi-day storage
-              </span>
-              <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary">
-                <Wifi className="w-4 h-4 mr-2" />
-                Wi-Fi available
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
-          <CardHeader>
-            <CardTitle>Choose Your Plan</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup
-              value={selectedPlan}
-              onValueChange={(value: "daily" | "monthly") =>
-                setSelectedPlan(value)
-              }
-              className="grid grid-cols-2 gap-4"
+    <div className="bg-gray-50 min-h-screen py-4 px-2">
+      <div className="container mx-auto max-w-6xl pr-5 py-8">
+        {/* Checkout Progress */}
+        <div className="flex justify-center items-center mb-8 border-b pb-4 text-center sm:text-left">
+          {/* Step 1 */}
+          <div
+            className={`flex items-center ${
+              currentStep >= 1 ? "text-primary" : "text-gray-400"
+            }`}
+          >
+            <div
+              className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                currentStep >= 1
+                  ? "border-primary bg-primary text-white"
+                  : "border-gray-300"
+              } mr-2`}
             >
-              <div
-                className={cn(
-                  "flex flex-col items-center space-y-2 p-4 rounded-lg border-2 transition-colors",
-                  selectedPlan === "daily"
-                    ? "border-primary bg-primary/5"
-                    : "border-primary/20 hover:bg-primary/5"
-                )}
-              >
-                <RadioGroupItem value="daily" id="daily" className="sr-only" />
-                <Label htmlFor="daily" className="cursor-pointer text-center">
-                  <div className="font-bold text-lg mb-1">Daily Plan</div>
-                  <div className="text-sm text-muted-foreground">
-                    ₹100/day per bag
-                  </div>
-                </Label>
-              </div>
-              <div
-                className={cn(
-                  "flex flex-col items-center space-y-2 p-4 rounded-lg border-2 transition-colors",
-                  selectedPlan === "monthly"
-                    ? "border-primary bg-primary/5"
-                    : "border-primary/20 hover:bg-primary/5"
-                )}
-              >
-                <RadioGroupItem
-                  value="monthly"
-                  id="monthly"
-                  className="sr-only"
-                />
-                <Label htmlFor="monthly" className="cursor-pointer text-center">
-                  <div className="font-bold text-lg mb-1">Monthly Plan</div>
-                  <div className="text-sm text-muted-foreground">
-                    From ₹500/month per bag
-                  </div>
-                </Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
-        <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
-          <CardHeader>
-            <CardTitle>Booking Type</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup
-              value={bookingType}
-              onValueChange={(value: "self" | "pickup") =>
-                setBookingType(value)
-              }
-              className="flex flex-col space-y-3"
-            >
-              <div className="flex items-center space-x-3 p-4 rounded-lg border-2 border-primary/20 hover:bg-primary/5 transition-colors">
-                <RadioGroupItem value="self" id="self" />
-                <Label
-                  htmlFor="self"
-                  className="flex items-center cursor-pointer"
-                >
-                  <Package className="w-5 h-5 mr-2 text-primary" />
-                  <div>
-                    <span className="font-medium">Self Drop-off</span>
-                    <p className="text-sm text-muted-foreground">
-                      Bring your bags to our location
-                    </p>
-                  </div>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-3 p-4 rounded-lg border-2 border-primary/20 hover:bg-primary/5 transition-colors">
-                <RadioGroupItem value="pickup" id="pickup" />
-                <Label
-                  htmlFor="pickup"
-                  className="flex items-center cursor-pointer"
-                >
-                  <Truck className="w-5 h-5 mr-2 text-primary" />
-                  <div>
-                    <span className="font-medium">Schedule Pickup</span>
-                    <p className="text-sm text-muted-foreground">
-                      We'll come to your location
-                    </p>
-                  </div>
-                </Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
-        <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
-          <CardHeader>
-            <CardTitle>Booking Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <Label className="text-sm font-medium mb-2 block">
-                  Drop off
-                </Label>
-                <div className="flex gap-4">
-                  <Popover open={isDropOffOpen} onOpenChange={setIsDropOffOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-[200px] justify-start text-left font-normal",
-                          !dropOffDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {dropOffDate ? (
-                          format(dropOffDate, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={dropOffDate}
-                        onSelect={handleDropDateSelect}
-                        initialFocus
-                        disabled={isDropOffDateDisabled}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <TimeSlotPicker
-                    availableSlots={availableSlots}
-                    selectedTime={dropOffTime}
-                    onTimeChange={(time: string) =>
-                      handleTimeChange(time, "drop")
-                    }
-                  />
-                </div>
-              </div>
-              {/* {bookingType === "pickup" && ( */}
-              <div>
-                <Label className="text-sm font-medium mb-2 block">
-                  Pick up
-                </Label>
-                <div className="flex gap-4">
-                  <Popover open={isPickUpOpen} onOpenChange={setIsPickUpOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-[200px] justify-start text-left font-normal",
-                          !pickUpDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {pickUpDate ? (
-                          format(pickUpDate, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={pickUpDate}
-                        onSelect={handlePickupDateSelect}
-                        initialFocus
-                        disabled={isPickUpDateDisabled}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <TimeSlotPicker
-                    availableSlots={availableSlots}
-                    selectedTime={pickupTime}
-                    onTimeChange={(time: string) =>
-                      handleTimeChange(time, "pickup")
-                    }
-                  />
-                </div>
-              </div>
+              1
             </div>
+            <span className="font-medium text-sm sm:text-base">
+              Contact Detail
+            </span>
+          </div>
 
-            {bookingType === "pickup" && (
-              <>
-                {/* <div className="mt-6">
-                  <Label htmlFor="address">Pickup Address</Label>
-                  <div className="flex mt-2">
+          {/* Arrow 1 (Visible on mobile) */}
+          <div
+            className={`w-full sm:w-10 h-px my-2 sm:my-0 mx-2 ${
+              currentStep >= 2 ? "bg-primary" : "bg-gray-300"
+            }`}
+          />
+
+          {/* Step 2 */}
+          <div
+            className={`flex items-center ${
+              currentStep >= 2 ? "text-primary" : "text-gray-400"
+            }`}
+          >
+            <div
+              className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                currentStep >= 2
+                  ? "border-primary bg-primary text-white"
+                  : "border-gray-300"
+              } mr-2`}
+            >
+              2
+            </div>
+            <span className="font-medium text-sm sm:text-base">
+              Booking Detail
+            </span>
+          </div>
+
+          {/* Arrow 2 (Visible on mobile) */}
+          <div
+            className={`w-full sm:w-10 h-px my-2 sm:my-0 mx-2 ${
+              currentStep >= 3 ? "bg-primary" : "bg-gray-300"
+            }`}
+          />
+
+          {/* Step 3 */}
+          <div
+            className={`flex items-center ${
+              currentStep >= 3 ? "text-primary" : "text-gray-400"
+            }`}
+          >
+            <div
+              className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                currentStep >= 3
+                  ? "border-primary bg-primary text-white"
+                  : "border-gray-300"
+              } mr-2`}
+            >
+              3
+            </div>
+            <span className="font-medium text-sm sm:text-base">
+              Review Order
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2">
+            <div className="bg-white p-6 rounded-lg shadow-sm mb-8">
+              <h1 className="text-2xl font-bold mb-6">Secure Checkout</h1>
+              <div className="p-3 bg-green-50 text-green-800 rounded-md flex items-center mb-6">
+                <ShieldCheck className="w-5 h-5 mr-2" />
+                Checkout securely - it takes only a few minutes
+              </div>
+
+              {currentStep === 1 && (
+                <>
+                  <h2 className="text-xl font-bold mb-4">Contact Detail</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <Label htmlFor="email">Alternative Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="Enter your email"
+                        className="mt-1"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="Enter your phone number"
+                        className="mt-1"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center mb-6">
+                    <Checkbox
+                      id="updates"
+                      checked={receiveUpdates}
+                      onCheckedChange={(checked: boolean) =>
+                        setReceiveUpdates(checked as boolean)
+                      }
+                    />
+                    <Label
+                      htmlFor="updates"
+                      className="ml-2 text-sm text-gray-600"
+                    >
+                      Receive text message updates about your booking. Message
+                      rates may apply.
+                    </Label>
+                  </div>
+
+                  <h2 className="text-xl font-bold mb-4">Traveler Detail</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input
+                        id="firstName"
+                        type="text"
+                        placeholder="Enter your first name"
+                        className="mt-1"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        type="text"
+                        placeholder="Enter your last name"
+                        className="mt-1"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <Label htmlFor="address">Address</Label>
                     <Textarea
                       id="address"
-                      placeholder="Enter your full address"
+                      placeholder="Enter your address"
+                      className="mt-1"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      className="flex-grow"
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="ml-2"
-                      onClick={handleLocateUser}
-                    >
-                      <Navigation className="h-4 w-4" />
-                    </Button>
                   </div>
-                </div> */}
-                <div className="space-y-4">
-                  <Label>Pickup Address</Label>
-                  <div className="relative flex">
-                    {/* Left icon */}
-                    <MapPin className="absolute left-3 top-3 h-5 w-5 text-black" />
 
-                    {/* Input field */}
-                    <Input
-                      placeholder="Search your location"
-                      value={location}
-                      onChange={handleLocationChange}
-                      onFocus={() => setShowSuggestions(true)}
-                      className="pl-10 pr-10 h-12 bg-white/90 backdrop-blur-sm text-gray-800 placeholder-gray-500 border-gray-300 focus:border-primary focus:ring-primary"
-                    />
-
-                    {/* Loading Spinner */}
-                    {isLoading && (
-                      <div className="absolute inset-y-0 right-8 flex items-center">
-                        <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-                      </div>
-                    )}
-
-                    {/* Clear Icon */}
-                    {location && (
-                      <X
-                        onClick={() => setLocation("")} // Clear the input value
-                        className="absolute right-3 top-3 h-5 w-5 text-gray-500 cursor-pointer hover:text-red-500"
+                  <div className="mb-6">
+                    <Label htmlFor="promoCode">Promo Code</Label>
+                    <div className="flex mt-1">
+                      <Input
+                        id="promoCode"
+                        type="text"
+                        placeholder="Enter promo code"
+                        className="rounded-r-none"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value)}
                       />
-                    )}
-
-                    {/* Right Icon (Locate Me) */}
-                    {!location && (
-                      <Navigation
-                        onClick={handleLocateMe}
-                        className="absolute right-3 top-3 h-5 w-5 text-gray-500 cursor-pointer hover:text-primary"
-                      />
-                    )}
-
-                    {/* Suggestions Dropdown */}
-                    {showSuggestions && suggestions.length > 0 && (
-                      <Card
-                        className="absolute z-20 w-full mt-12 shadow-lg max-h-[300px] overflow-hidden"
-                        ref={suggestionRef}
+                      <Button type="button" className="rounded-l-none">
+                        Apply
+                      </Button>
+                    </div>
+                    <div className="text-right mt-1">
+                      <a
+                        href="#"
+                        className="text-sm text-primary hover:underline"
                       >
-                        <ScrollArea className="w-full max-h-72 overflow-y-auto">
-                          {suggestions.map((suggestion, index) => (
+                        Find promo code?
+                      </a>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {currentStep === 2 && (
+                <>
+                  <h2 className="text-xl font-bold mb-4">Booking Detail</h2>
+
+                  <Card className="mb-6 hover:shadow-md transition-shadow">
+                    <CardHeader className="bg-primary/5">
+                      <CardTitle className="text-lg">
+                        Choose Your Plan
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                      <RadioGroup
+                        value={selectedPlan}
+                        onValueChange={(value: "daily" | "monthly") =>
+                          setSelectedPlan(value)
+                        }
+                        className="grid grid-cols-2 gap-4"
+                      >
+                        <div
+                          className={cn(
+                            "flex flex-col items-center space-y-2 p-4 rounded-lg border-2 transition-colors",
+                            selectedPlan === "daily"
+                              ? "border-primary bg-primary/5"
+                              : "border-primary/20 hover:bg-primary/5"
+                          )}
+                        >
+                          <RadioGroupItem
+                            value="daily"
+                            id="daily"
+                            className="sr-only"
+                          />
+                          <Label
+                            htmlFor="daily"
+                            className="cursor-pointer text-center"
+                          >
+                            <div className="font-bold text-lg mb-1">
+                              Daily Plan
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              ₹100/day per bag
+                            </div>
+                          </Label>
+                        </div>
+                        <div
+                          className={cn(
+                            "flex flex-col items-center space-y-2 p-4 rounded-lg border-2 transition-colors",
+                            selectedPlan === "monthly"
+                              ? "border-primary bg-primary/5"
+                              : "border-primary/20 hover:bg-primary/5"
+                          )}
+                        >
+                          <RadioGroupItem
+                            value="monthly"
+                            id="monthly"
+                            className="sr-only"
+                          />
+                          <Label
+                            htmlFor="monthly"
+                            className="cursor-pointer text-center"
+                          >
+                            <div className="font-bold text-lg mb-1">
+                              Monthly Plan
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              From ₹500/month per bag
+                            </div>
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="mb-6 hover:shadow-md transition-shadow">
+                    <CardHeader className="bg-primary/5">
+                      <CardTitle className="text-lg">Booking Type</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                      <RadioGroup
+                        value={bookingType}
+                        onValueChange={(value: "self" | "pickup") =>
+                          setBookingType(value)
+                        }
+                        className="flex flex-col space-y-3"
+                      >
+                        <div className="flex items-center space-x-3 p-4 rounded-lg border-2 border-primary/20 hover:bg-primary/5 transition-colors">
+                          <RadioGroupItem value="self" id="self" />
+                          <Label
+                            htmlFor="self"
+                            className="flex items-center cursor-pointer"
+                          >
+                            <Package className="w-5 h-5 mr-2 text-primary" />
+                            <div>
+                              <span className="font-medium">Self Drop-off</span>
+                              <p className="text-sm text-muted-foreground">
+                                Bring your bags to our location
+                              </p>
+                            </div>
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-4 rounded-lg border-2 border-primary/20 hover:bg-primary/5 transition-colors">
+                          <RadioGroupItem value="pickup" id="pickup" />
+                          <Label
+                            htmlFor="pickup"
+                            className="flex items-center cursor-pointer"
+                          >
+                            <Truck className="w-5 h-5 mr-2 text-primary" />
+                            <div>
+                              <span className="font-medium">
+                                Schedule Pickup
+                              </span>
+                              <p className="text-sm text-muted-foreground">
+                                \ We'll come to your location
+                              </p>
+                            </div>
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="mb-6 hover:shadow-md transition-shadow">
+                    <CardHeader className="bg-primary/5">
+                      <CardTitle className="text-lg">
+                        Schedule Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">
+                            Drop off
+                          </Label>
+                          <div className="flex flex-col sm:flex-row gap-4">
+                            <Popover
+                              open={isDropOffOpen}
+                              onOpenChange={setIsDropOffOpen}
+                            >
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full sm:w-[200px] justify-start text-left font-normal",
+                                    !dropOffDate && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {dropOffDate ? (
+                                    format(dropOffDate, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                className="w-auto p-0"
+                                align="start"
+                              >
+                                <Calendar
+                                  mode="single"
+                                  selected={dropOffDate}
+                                  onSelect={handleDropDateSelect}
+                                  initialFocus
+                                  disabled={isDropOffDateDisabled}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <TimeSlotPicker
+                              availableSlots={availableSlots}
+                              selectedTime={dropOffTime}
+                              onTimeChange={(time: string) =>
+                                handleTimeChange(time, "drop")
+                              }
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">
+                            Pick up
+                          </Label>
+                          <div className="flex flex-col sm:flex-row gap-4">
+                            <Popover
+                              open={isPickUpOpen}
+                              onOpenChange={setIsPickUpOpen}
+                            >
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full sm:w-[200px] justify-start text-left font-normal",
+                                    !pickUpDate && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {pickUpDate ? (
+                                    format(pickUpDate, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                className="w-auto p-0"
+                                align="start"
+                              >
+                                <Calendar
+                                  mode="single"
+                                  selected={pickUpDate}
+                                  onSelect={handlePickupDateSelect}
+                                  initialFocus
+                                  disabled={isPickUpDateDisabled}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <TimeSlotPicker
+                              availableSlots={availableSlots}
+                              selectedTime={pickupTime}
+                              onTimeChange={(time: string) =>
+                                handleTimeChange(time, "pickup")
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {bookingType === "pickup" && (
+                        <div className="mt-6">
+                          <Label>Pickup Address</Label>
+                          <div className="relative flex mt-2">
+                            <MapPin className="absolute left-3 top-3 h-5 w-5 text-black" />
+
+                            <Input
+                              placeholder="Search your location"
+                              value={location}
+                              onChange={handleLocationChange}
+                              onFocus={() => setShowSuggestions(true)}
+                              className="pl-10 pr-10 h-12 bg-white/90 text-gray-800 placeholder-gray-500"
+                            />
+
+                            {isLoading && (
+                              <div className="absolute inset-y-0 right-8 flex items-center">
+                                <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                              </div>
+                            )}
+
+                            {location && (
+                              <X
+                                onClick={() => setLocation("")}
+                                className="absolute right-3 top-3 h-5 w-5 text-gray-500 cursor-pointer hover:text-red-500"
+                              />
+                            )}
+
+                            {!location && (
+                              <Navigation
+                                onClick={handleLocateMe}
+                                className="absolute right-3 top-3 h-5 w-5 text-gray-500 cursor-pointer hover:text-primary"
+                              />
+                            )}
+
+                            {showSuggestions && suggestions.length > 0 && (
+                              <Card
+                                className="absolute z-20 w-full mt-12 shadow-lg max-h-[300px] overflow-hidden"
+                                ref={suggestionRef}
+                              >
+                                <ScrollArea className="w-full max-h-72 overflow-y-auto">
+                                  {suggestions.map((suggestion, index) => (
+                                    <div
+                                      key={index}
+                                      className="p-3 hover:bg-gray-100 cursor-pointer transition-colors"
+                                      onClick={() =>
+                                        handleSuggestionClick(suggestion)
+                                      }
+                                    >
+                                      <div className="flex justify-between items-start">
+                                        <div className="flex-grow text-left">
+                                          <p className="font-semibold text-gray-800">
+                                            {suggestion.title}
+                                          </p>
+                                          <p className="text-sm text-gray-600 mt-1">
+                                            {suggestion.address}
+                                          </p>
+                                        </div>
+                                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-2">
+                                          {suggestion.distance} km
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </ScrollArea>
+                              </Card>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {bookingType === "self" && (
+                        <div className="mt-6">
+                          <Label htmlFor="numberOfBags">Number of Bags</Label>
+                          <div className="flex items-center mt-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() =>
+                                setNumberOfBags(Math.max(1, numberOfBags - 1))
+                              }
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <Input
+                              id="numberOfBags"
+                              type="number"
+                              value={numberOfBags}
+                              onChange={(e) =>
+                                setNumberOfBags(
+                                  Math.max(
+                                    1,
+                                    Number.parseInt(e.target.value) || 1
+                                  )
+                                )
+                              }
+                              className="w-20 mx-2 text-center"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setNumberOfBags(numberOfBags + 1)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {(bookingType === "pickup" ||
+                    (bookingType === "self" && selectedPlan === "monthly")) && (
+                    <Card className="mb-6 hover:shadow-md transition-shadow">
+                      <CardHeader className="bg-primary/5">
+                        <CardTitle className="text-lg">Your Bags</CardTitle>
+                        <CardDescription>
+                          Upload photos and select sizes for your bags
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-4">
+                        <div className="space-y-6">
+                          {bags.map((bag, index) => (
                             <div
                               key={index}
-                              className="p-3 hover:bg-gray-100 cursor-pointer transition-colors duration-200"
-                              onClick={() => handleSuggestionClick(suggestion)}
+                              className="p-4 border rounded-lg bg-white shadow-sm"
                             >
-                              <div className="flex justify-between items-start">
-                                <div className="flex-grow text-left">
-                                  <p className="font-semibold text-gray-800">
-                                    {suggestion.title}
-                                  </p>
-                                  <p className="text-sm text-gray-600 mt-1">
-                                    {suggestion.address}
-                                  </p>
+                              <div className="flex flex-col md:flex-row md:items-start gap-6">
+                                <div className="relative">
+                                  <div
+                                    onClick={() =>
+                                      fileInputRefs.current[index]?.click()
+                                    }
+                                    className={cn(
+                                      "w-32 h-32 rounded-lg flex items-center justify-center cursor-pointer transition-all overflow-y-auto",
+                                      bag.image
+                                        ? "bg-white"
+                                        : "bg-gray-50 hover:bg-gray-100 border-2 border-dashed"
+                                    )}
+                                  >
+                                    {bag.image ? (
+                                      <Image
+                                        src={bag.image || "/placeholder.svg"}
+                                        alt={`Bag ${index + 1}`}
+                                        width={500}
+                                        height={500}
+                                        className="rounded-lg object-cover w-full h-full"
+                                      />
+                                    ) : uploadProgress[index] !== undefined ? (
+                                      <div className="text-center">
+                                        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                                        <span className="text-sm text-muted-foreground">
+                                          {uploadProgress[index]}%
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="text-center p-4">
+                                        <Camera className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                                        <span className="text-sm text-muted-foreground">
+                                          Upload photo
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <Input
+                                    type="file"
+                                    ref={(el) => {
+                                      if (el) {
+                                        fileInputRefs.current[index] = el;
+                                      }
+                                    }}
+                                    className="hidden"
+                                    onChange={(e) =>
+                                      handleImageUpload(index, e)
+                                    }
+                                    accept="image/*"
+                                  />
                                 </div>
-                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-2">
-                                  {suggestion.distance} km
-                                </span>
+                                <div className="flex-1 space-y-4">
+                                  <div>
+                                    <Label className="text-base">
+                                      Bag Size
+                                    </Label>
+                                    <RadioGroup
+                                      value={bag.size}
+                                      onValueChange={(
+                                        value: "small" | "medium" | "large"
+                                      ) => handleBagSizeChange(index, value)}
+                                      className="flex flex-wrap gap-4 mt-2"
+                                    >
+                                      {[
+                                        { size: "small", weight: "Up to 10kg" },
+                                        { size: "medium", weight: "10-20kg" },
+                                        { size: "large", weight: "20-25kg" },
+                                      ].map(({ size, weight }) => (
+                                        <div
+                                          key={size}
+                                          className={cn(
+                                            "flex flex-col items-center p-4 rounded-lg border-2 cursor-pointer transition-all",
+                                            bag.size === size
+                                              ? "border-primary bg-primary/5"
+                                              : "border-transparent bg-gray-50 hover:bg-gray-100"
+                                          )}
+                                        >
+                                          <RadioGroupItem
+                                            value={size}
+                                            id={`size-${size}-${index}`}
+                                            className="hidden"
+                                          />
+                                          <Label
+                                            htmlFor={`size-${size}-${index}`}
+                                            className="cursor-pointer text-center"
+                                          >
+                                            <div className="font-medium capitalize mb-1">
+                                              {size}
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                              {weight}
+                                            </div>
+                                          </Label>
+                                        </div>
+                                      ))}
+                                    </RadioGroup>
+                                  </div>
+                                </div>
+                                {bags.length > 1 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleRemoveBag(index)}
+                                    className="text-muted-foreground hover:text-destructive"
+                                  >
+                                    <Minus className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           ))}
-                        </ScrollArea>
-                      </Card>
-                    )}
-                  </div>
-
-                  {/* Error Message */}
-                  {error && (
-                    <p className="text-sm text-red-500 bg-white/80 backdrop-blur-sm p-1 rounded">
-                      {error}
-                    </p>
-                  )}
-                </div>
-              </>
-            )}
-
-            {bookingType === "self" && (
-              <div className="mt-6">
-                <Label htmlFor="numberOfBags">Number of Bags</Label>
-                <div className="flex items-center mt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() =>
-                      setNumberOfBags(Math.max(1, numberOfBags - 1))
-                    }
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    id="numberOfBags"
-                    type="number"
-                    value={numberOfBags}
-                    onChange={(e) =>
-                      setNumberOfBags(
-                        Math.max(1, Number.parseInt(e.target.value) || 1)
-                      )
-                    }
-                    className="w-20 mx-2 text-center"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setNumberOfBags(numberOfBags + 1)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {(bookingType === "pickup" ||
-          (bookingType === "self" && selectedPlan === "monthly")) && (
-          <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle>Your Bags</CardTitle>
-              <CardDescription>
-                Upload photos and select sizes for your bags
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {bags.map((bag, index) => (
-                  <div
-                    key={index}
-                    className="p-4 border rounded-lg bg-white shadow-sm"
-                  >
-                    <div className="flex items-start gap-6">
-                      <div className="relative">
-                        <div
-                          onClick={() => fileInputRefs.current[index]?.click()}
-                          className={cn(
-                            "w-32 h-32 rounded-lg flex items-center justify-center cursor-pointer transition-all overflow-y-auto",
-                            bag.image
-                              ? "bg-white"
-                              : "bg-gray-50 hover:bg-gray-100 border-2 border-dashed"
-                          )}
-                        >
-                          {bag.image ? (
-                            <Image
-                              src={bag.image || "/placeholder.svg"}
-                              alt={`Bag ${index + 1}`}
-                              width={500}
-                              height={500}
-                              className="rounded-lg object-cover w-full h-full"
-                            />
-                          ) : uploadProgress[index] !== undefined ? (
-                            <div className="text-center">
-                              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                              <span className="text-sm text-muted-foreground">
-                                {uploadProgress[index]}%
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="text-center p-4">
-                              <Camera className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                              <span className="text-sm text-muted-foreground">
-                                Upload photo
-                              </span>
-                            </div>
-                          )}
+                          <Button
+                            onClick={handleAddBag}
+                            variant="outline"
+                            className="w-full"
+                          >
+                            Add another bag
+                          </Button>
                         </div>
-                        <Input
-                          type="file"
-                          ref={(el) => {
-                            if (el) {
-                              fileInputRefs.current[index] = el;
-                            }
-                          }}
-                          className="hidden"
-                          onChange={(e) => handleImageUpload(index, e)}
-                          accept="image/*"
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+
+              {currentStep === 3 && (
+                <>
+                  <h2 className="text-xl font-bold mb-4">Review Your Order</h2>
+
+                  <div className="space-y-6">
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h3 className="text-lg font-semibold mb-2">
+                        Contact Information
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-500">Email</p>
+                          <p>{email}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Phone</p>
+                          <p>{phoneNumber}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h3 className="text-lg font-semibold mb-2">
+                        Personal Information
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-500">Name</p>
+                          <p>
+                            {firstName} {lastName}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Address</p>
+                          <p>{address || "Not provided"}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h3 className="text-lg font-semibold mb-2">
+                        Storage Details
+                      </h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <p className="text-sm text-gray-500">Location</p>
+                          <p>{storageFacility.name}</p>
+                        </div>
+                        <div className="flex justify-between">
+                          <p className="text-sm text-gray-500">Plan</p>
+                          <p>
+                            {selectedPlan === "daily"
+                              ? "Daily Plan"
+                              : "Monthly Plan"}
+                          </p>
+                        </div>
+                        <div className="flex justify-between">
+                          <p className="text-sm text-gray-500">Booking Type</p>
+                          <p>
+                            {bookingType === "self"
+                              ? "Self Drop-off"
+                              : "Pickup Service"}
+                          </p>
+                        </div>
+                        <div className="flex justify-between">
+                          <p className="text-sm text-gray-500">Drop-off</p>
+                          <p>
+                            {dropOffDate
+                              ? format(dropOffDate, "PPP")
+                              : "Not selected"}{" "}
+                            at {dropOffTime}
+                          </p>
+                        </div>
+                        <div className="flex justify-between">
+                          <p className="text-sm text-gray-500">Pick-up</p>
+                          <p>
+                            {pickUpDate
+                              ? format(pickUpDate, "PPP")
+                              : "Not selected"}{" "}
+                            at {pickupTime}
+                          </p>
+                        </div>
+                        {bookingType === "pickup" && (
+                          <div className="flex justify-between">
+                            <p className="text-sm text-gray-500">
+                              Pickup Address
+                            </p>
+                            <p>{location}</p>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <p className="text-sm text-gray-500">Bags</p>
+                          <p>
+                            {bookingType === "self" && selectedPlan === "daily"
+                              ? `${numberOfBags} bag(s)`
+                              : `${bags.length} bag(s) (${bags
+                                  .map((b) => b.size)
+                                  .join(", ")})`}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {error && (
+                <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-md">
+                  {error}
+                </div>
+              )}
+
+              <div className="mt-8 flex flex-col-reverse sm:flex-row justify-between gap-4">
+                {currentStep > 1 && (
+                  <Button
+                    variant="outline"
+                    onClick={goToPreviousStep}
+                    className="flex-1 sm:flex-initial"
+                  >
+                    Back
+                  </Button>
+                )}
+                {currentStep < 3 ? (
+                  <Button
+                    onClick={goToNextStep}
+                    className="flex-1 sm:flex-initial"
+                  >
+                    Continue
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleConfirmBooking}
+                    className="flex-1 sm:flex-initial"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Confirm Booking"
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Order Summary */}
+          <div className="lg:col-span-1">
+            <div className="bg-white p-6 rounded-lg shadow-sm sticky top-4">
+              <h2 className="text-xl font-bold mb-4">Order Summary</h2>
+
+              <div className="mb-4">
+                <div className="aspect-w-16 aspect-h-9 mb-3 rounded-lg overflow-hidden">
+                  <div className="grid grid-cols-3 gap-1">
+                    {storageFacility.images.map((img, i) => (
+                      <div
+                        key={i}
+                        className={i === selectedIndex ? "col-span-3" : ""}
+                        onClick={() => setSelectedIndex(i)}
+                      >
+                        <Image
+                          src={img || "/placeholder.svg"}
+                          alt={`${storageFacility.name} ${i + 1}`}
+                          width={400}
+                          height={i === 0 ? 200 : 100}
+                          className="w-full h-full object-cover cursor-pointer"
                         />
                       </div>
-                      <div className="flex-1 space-y-4">
-                        <div>
-                          <Label className="text-base">Bag Size</Label>
-                          <RadioGroup
-                            value={bag.size}
-                            onValueChange={(
-                              value: "small" | "medium" | "large"
-                            ) => handleBagSizeChange(index, value)}
-                            className="flex gap-4 mt-2"
-                          >
-                            {[
-                              { size: "small", weight: "Up to 10kg" },
-                              { size: "medium", weight: "10-20kg" },
-                              { size: "large", weight: "20-25kg" },
-                            ].map(({ size, weight }) => (
-                              <div
-                                key={size}
-                                className={cn(
-                                  "flex flex-col items-center p-4 rounded-lg border-2 cursor-pointer transition-all",
-                                  bag.size === size
-                                    ? "border-primary bg-primary/5"
-                                    : "border-transparent bg-gray-50 hover:bg-gray-100"
-                                )}
-                              >
-                                <RadioGroupItem
-                                  value={size}
-                                  id={`size-${size}-${index}`}
-                                  className="hidden"
-                                />
-                                <Label
-                                  htmlFor={`size-${size}-${index}`}
-                                  className="cursor-pointer text-center"
-                                >
-                                  <div className="font-medium capitalize mb-1">
-                                    {size}
-                                  </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {weight}
-                                  </div>
-                                </Label>
-                              </div>
-                            ))}
-                          </RadioGroup>
-                        </div>
-                      </div>
-                      {bags.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveBag(index)}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
+                    ))}
                   </div>
-                ))}
-                <Button
-                  onClick={handleAddBag}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Add another bag
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                </div>
 
-        <Card className="mb-8 shadow-lg hover:shadow-xl transition-shadow duration-300">
-          <CardHeader>
-            <CardTitle>Pricing Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {selectedPlan === "daily" ? (
-                <>
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <span className="text-muted-foreground">
-                      Number of bags
-                    </span>
-                    <span>{numberOfBags}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <span className="text-muted-foreground">
-                      Price per bag per day
-                    </span>
-                    <span>₹100</span>
-                  </div>
-                  {dropOffDate && pickUpDate && (
-                    <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-muted-foreground">
-                        Number of days
-                      </span>
-                      <span>
-                        {Math.ceil(
-                          (pickUpDate.getTime() - dropOffDate.getTime()) /
-                            (1000 * 3600 * 24)
-                        )}
-                      </span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <span className="text-muted-foreground">
-                      Number of bags
-                    </span>
-                    <span>{bags.length}</span>
-                  </div>
-                  {bags.map((bag, index) => (
-                    <div
-                      key={index}
-                      className="flex justify-between items-center py-2 border-b"
-                    >
-                      <span className="text-muted-foreground">
-                        {bag.size} bag
-                      </span>
-                      <span>
-                        ₹
-                        {bag.size === "small"
-                          ? "500"
-                          : bag.size === "medium"
-                          ? "750"
-                          : "1000"}
-                        /month
-                      </span>
-                    </div>
-                  ))}
-                  {dropOffDate && pickUpDate && (
-                    <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-muted-foreground">Months</span>
-                      <span>{Math.ceil(duration / 30)}</span>
-                    </div>
-                  )}
-                </>
-              )}
-              {bookingType === "pickup" && (
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-muted-foreground">Pickup Charge</span>
-                  <span className="font-medium">
-                    {` ₹${PickupCharge} (${Distance.toFixed(1)} km)  `}
+                <h3 className="font-bold text-lg">{storageFacility.name}</h3>
+                <div className="flex items-center mb-1">
+                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 mr-1" />
+                  <span className="font-medium mr-1">
+                    {storageFacility.rating}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    ({storageFacility.reviews} reviews)
                   </span>
                 </div>
-              )}
-              <div className="flex justify-between items-center text-lg font-medium">
-                <span>Total Price</span>
-                <span>₹{totalPrice}</span>
+                <p className="text-sm text-gray-500 flex items-center">
+                  <MapPin className="w-4 h-4 mr-1" /> {storageFacility.address}
+                </p>
               </div>
-              {bookingType === "self" && selectedPlan === "daily" && (
-                <p className="text-sm text-muted-foreground">
-                  *Only the token amount of ₹100 will be charged now. The
-                  remaining amount will be due at drop-off.
-                </p>
-              )}
-              {bookingType === "self" && selectedPlan === "monthly" && (
-                <p className="text-sm text-muted-foreground">
-                  *The full amount will be charged upon drop-off and
-                  verification of your bags.
-                </p>
-              )}
+
+              <Separator className="my-4" />
+
+              <div className="space-y-4 mb-6">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Drop-off Date</span>
+                  <span>
+                    {dropOffDate
+                      ? format(dropOffDate, "MMM dd, yyyy")
+                      : "Not selected"}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Pick-up Date</span>
+                  <span>
+                    {pickUpDate
+                      ? format(pickUpDate, "MMM dd, yyyy")
+                      : "Not selected"}
+                  </span>
+                </div>
+                {dropOffDate && pickUpDate && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Duration</span>
+                    <span>{duration} days</span>
+                  </div>
+                )}
+                {selectedPlan === "daily" ? (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Number of bags</span>
+                      <span>{numberOfBags}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">
+                        Price per bag per day
+                      </span>
+                      <span>₹100</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Number of bags</span>
+                      <span>{bags.length}</span>
+                    </div>
+                    {bags.map((bag, index) => (
+                      <div key={index} className="flex justify-between text-sm">
+                        <span className="text-gray-500">{bag.size} bag</span>
+                        <span>
+                          ₹
+                          {bag.size === "small"
+                            ? "500"
+                            : bag.size === "medium"
+                            ? "750"
+                            : "1000"}
+                          /month
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
+                {bookingType === "pickup" && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Pickup Charge</span>
+                    <span>
+                      ₹{PickupCharge} ({Distance.toFixed(1)} km)
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <Separator className="my-4" />
+
+              <div className="space-y-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Subtotal</span>
+                  <span>₹{totalPrice}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Booking fee</span>
+                  <span>₹50</span>
+                </div>
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Total</span>
+                  <span>₹{totalPrice + 50}</span>
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              <div className="space-y-4">
+                <h3 className="font-bold text-lg">Book with confidence</h3>
+
+                <div className="flex items-start gap-2">
+                  <BadgeCheck className="w-5 h-5 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium">Lowest price guarantee</p>
+                    <p className="text-sm text-gray-500">
+                      Find it cheaper? We'll refund the difference
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <ShieldAlert className="w-5 h-5 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium">Privacy protection</p>
+                    <p className="text-sm text-gray-500">
+                      We use SSL encryption to keep your data secure
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <AlarmClock className="w-5 h-5 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium">24/7 global support</p>
+                    <p className="text-sm text-gray-500">
+                      Get the answers you need, when you need them
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Button
-          onClick={handleConfirmBooking}
-          className="w-full h-12 text-lg mb-8 bg-primary hover:bg-primary/90 transition-colors duration-300"
-          size="lg"
-        >
-          {bookingType === "self" && selectedPlan === "daily"
-            ? `Reserve Slot (Pay ₹100 Token Amount)`
-            : bookingType === "self" && selectedPlan === "monthly"
-            ? "Reserve Slot (Pay ₹100 Token Amount)"
-            : "Schedule Pickup"}
-        </Button>
-
-        {error && (
-          <p className="mt-4 text-sm text-red-500 text-center">{error}</p>
-        )}
-
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="item-1">
-            <AccordionTrigger>
-              <div className="flex items-center">
-                <Info className="w-5 h-5 mr-2" />
-                Pricing Information
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-2">
-                <p>
-                  <strong>Daily Plan:</strong> ₹100 per day for each bag.
-                </p>
-                <p>
-                  <strong>Monthly Plan:</strong> Starting from ₹500 per month
-                  for each bag, depending on the size:
-                </p>
-                <ul className="list-disc list-inside pl-4">
-                  <li>Small bag: ₹500 per month</li>
-                  <li>Medium bag: ₹750 per month</li>
-                  <li>Large bag: ₹1000 per month</li>
-                </ul>
-                <p>
-                  <strong>Pickup Service:</strong> Additional ₹50 charge for
-                  pickup service.
-                </p>
-                <p>
-                  <strong>Self Drop-off (Daily Plan):</strong> Only a ₹100 token
-                  amount is charged initially.
-                </p>
-                <p>
-                  <strong>Self Drop-off (Monthly Plan):</strong> Full amount
-                  charged upon drop-off and verification.
-                </p>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+          </div>
+        </div>
       </div>
-    </ScrollArea>
+    </div>
   );
 }

@@ -4,6 +4,7 @@ import { SearchForm } from "@/components/search-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import Carousel from "@/components/ui/carousel";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Typewriter } from "@/components/ui/typewriter";
@@ -21,98 +22,127 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+const slideData = [
+  {
+    title: "Central Station Storage",
+    button: "Book Now",
+    src: "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  },
+  {
+    title: "Airport Luggage Locker",
+    button: "Book Now",
+    src: "https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  },
+  {
+    title: "Downtown Baggage Hub",
+    button: "Book Now",
+    src: "https://images.unsplash.com/photo-1581553680321-4fffae59fccd?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  },
+  {
+    title: "Tourist Center Storage",
+    button: "Book Now",
+    src: "https://images.unsplash.com/photo-1565026057447-bc90a3dceb87?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  },
+];
+
+// Luggage storage locations by city
+const luggageStoreData = [
+  {
+    name: "Bengaluru",
+    image:
+      "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    locations: 12,
+    price: "₹49/day",
+  },
+  {
+    name: "Delhi",
+    image:
+      "https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    locations: 18,
+    price: "₹59/day",
+  },
+  {
+    name: "Chennai",
+    image:
+      "https://images.unsplash.com/photo-1581553680321-4fffae59fccd?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    locations: 9,
+    price: "₹45/day",
+  },
+  {
+    name: "Mumbai",
+    image:
+      "https://images.unsplash.com/photo-1565026057447-bc90a3dceb87?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    locations: 22,
+    price: "₹65/day",
+  },
+  {
+    name: "Hyderabad",
+    image:
+      "https://images.unsplash.com/photo-1553913861-c0fddf2619ee?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    locations: 8,
+    price: "₹49/day",
+  },
+  {
+    name: "Pune",
+    image:
+      "https://images.unsplash.com/photo-1553531889-e6cf4d692b1b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    locations: 6,
+    price: "₹45/day",
+  },
+];
 export default function Home() {
   const router = useRouter();
-
-  const cities = [
-    {
-      name: "Bengaluru",
-      image: "/bangalore.jpg",
-      landmark: "Vidhana Soudha",
-    },
-    {
-      name: "Delhi",
-      image: "/delhi.jpg",
-      landmark: "India Gate",
-    },
-    {
-      name: "Chennai",
-      image: "/chennai.jpg",
-      landmark: "Central Station",
-    },
-    {
-      name: "Mumbai",
-      image: "/delhi.jpg",
-      landmark: "Gateway of India",
-    },
-
-    {
-      name: "Hyderabad",
-      image: "/hyderabad.jpg",
-      landmark: "Charminar",
-    },
-    {
-      name: "Pune",
-      image: "/chennai.jpg",
-      landmark: "Shaniwar Wada",
-    },
-  ];
 
   return (
     <div>
       <main>
         {/* Hero Section */}
-        <section className="relative bg-[#1a237e] text-white mt-[30px] py-16 rounded-lg">
-          <div className="container mx-auto px-4 relative z-10">
-            <div className="max-w-3xl mx-auto text-center space-y-8">
-              <h1 className="flex flex-col">
-                <span className="text-4xl md:text-6xl font-bold">
-                  {"Store Your Luggage "}
-                </span>
-                <Typewriter
-                  text={["Anywhere", "Anytime", "By Anyone"]}
-                  speed={70}
-                  waitTime={1500}
-                  deleteSpeed={40}
-                  cursorChar={""}
-                  className="text-3xl md:text-5xl  font-bold"
-                />
-              </h1>
+        <div className="relative mt-8">
+          {/* Carousel Component */}
+          <Carousel slides={slideData} />
 
-              <Card className="bg-white p-6">
-                <CardContent className="p-0 space-y-4">
-                  <SearchForm />
-                </CardContent>
-              </Card>
+          {/* SearchForm Overlay */}
+          <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center  p-4">
+            <div className="container mx-auto px-4 max-w-4xl">
+              <div className="w-full">
+                <SearchForm />
+              </div>
             </div>
           </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-900 to-blue-800 opacity-50" />
-        </section>
+        </div>
 
-        {/* Cities Section */}
+        {/* Luggage Store Locations Section */}
         <section className="py-16 bg-slate-50">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl md:text-5xl font-bold text-[#1a237e] text-center mb-12">
-              TOP CITIES
+              LUGGAGE STORAGE LOCATIONS
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-              {cities.map((city) => (
+              {luggageStoreData.map((location) => (
                 <Card
-                  key={city.name}
+                  key={location.name}
                   className="hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => router.push(`/search?location=${city.name}`)}
+                  onClick={() =>
+                    router.push(`/search?location=${location.name}`)
+                  }
                 >
                   <CardContent className="p-3">
                     <div className="relative h-40 mb-4 rounded-lg overflow-hidden">
                       <Image
-                        src={city.image || "/placeholder.svg"}
-                        alt={city.landmark}
+                        src={location.image || "/placeholder.svg"}
+                        alt={`Luggage storage in ${location.name}`}
                         fill
                         className="object-cover"
                       />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white p-1 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span>{location.locations} locations</span>
+                          <span className="font-bold">{location.price}</span>
+                        </div>
+                      </div>
                     </div>
                     <h3 className="text-center font-semibold text-lg">
-                      {city.name}
+                      {location.name}
                     </h3>
                   </CardContent>
                 </Card>
@@ -250,7 +280,6 @@ export default function Home() {
           </div>
         </section>
       </main>
-
       <footer className="bg-[#1a237e] text-white py-12 rounded-lg">
         <div className="mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-6">
@@ -263,13 +292,13 @@ export default function Home() {
             <div>
               <h4 className="text-lg font-bold mb-4">Popular Cities</h4>
               <ul className="space-y-2">
-                {cities.slice(0, 4).map((city) => (
+                {luggageStoreData.slice(0, 4).map((city) => (
                   <li key={city.name}>
                     <Link
                       href={`/search?location=${city.name || ""}`}
                       className="text-sm text-blue-200 hover:text-white"
                     >
-                      {city.name}
+                      {city.name} ({city.locations} locations)
                     </Link>
                   </li>
                 ))}

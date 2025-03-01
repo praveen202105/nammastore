@@ -26,17 +26,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${montserrat.variable} font-sans antialiased overflow-y-hidden`}
-      >
-        {" "}
+     <body className={`${montserrat.variable} font-sans antialiased h-full`}>
         <UserProvider>
           <GoogleOAuthProvider clientId={process.env.GOOGLE_CLIENT_ID || ""}>
             <NavBar />
 
-            <div className=" h-[calc(100vh-50px)]">
+            <div className="h-[calc(100vh-2rem)]">
               <ScrollArea className="h-full w-full">
-                <div className="pl-4 pr-[4px] pt-14 sm:px-6 md:px-8">
+                <div className="pt-14 sm:px-6 md:px-8">
                   {children}
                   <Toaster />
                 </div>
