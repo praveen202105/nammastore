@@ -42,7 +42,7 @@ const btn = {
 };
 
 function FloatingButton({ className, children, triggerContent }: FloatingButtonProps) {
-  const ref = useRef(null);
+  const ref:any = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
 
   useOnClickOutside(ref, () => setIsOpen(false));
