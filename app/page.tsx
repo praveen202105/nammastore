@@ -1,5 +1,6 @@
 "use client";
 import EnquiryForm from "@/components/enquire-form";
+import { FloatingButtonExample } from "@/components/floating-button-ui";
 import { SearchForm } from "@/components/search-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -110,7 +111,9 @@ export default function Home() {
             </div>
           </div>
         </div>
-
+        <div className="fixed bottom-4 right-4 z-50">
+          <FloatingButtonExample />
+        </div>
         {/* Luggage Store Locations Section */}
         <section className="py-16 bg-slate-50">
           <div className="container mx-auto px-4">
